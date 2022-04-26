@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Train a network on MIL h5 bag features."""
 from dataclasses import dataclass
-import json
 import os
 from pathlib import Path
 from typing import Any, Sequence, Optional, TypeVar, Union
@@ -18,7 +17,7 @@ from fastai.vision.all import (
     SaveModelCallback, EarlyStoppingCallback, CSVLogger,
     DataLoader, DataLoaders)
 
-from ..data import ZipDataset, EncodedDataset
+from marugoto.data import ZipDataset, EncodedDataset
 
 
 __all__ = [
@@ -109,7 +108,7 @@ def train(
         train_bags:  H5s containing the bags to train on (cf.
             `marugoto.mil`).
         train_targets:  The ground truths of the training bags.
-        valid_bags:  H5s containing the bags to train on.
+        valid_bags:  H5s containing the bags to validate on.
         train_targets:  The ground thruths of the validation bags.
     """
     train_ds = make_dataset(target_enc, train_bags, train_targets)
@@ -120,9 +119,10 @@ def train(
         train_ds, batch_size=64, shuffle=True, num_workers=os.cpu_count())
     valid_dl = DataLoader(
         valid_ds, batch_size=512, shuffle=False, num_workers=os.cpu_count())
+    batch = train_dl.one_batch()
 
     model = nn.Sequential(
-        create_head(512, 2)[1:],
+        create_head(batch[0].shape[-1], batch[1].shape[-1], concat_pool=False)[1:],
         nn.Softmax(dim=1))
 
     # weigh inversely to class occurances

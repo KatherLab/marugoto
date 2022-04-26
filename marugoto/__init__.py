@@ -9,4 +9,5 @@ __changelog__ = {
     '0.2.0': 'Update marugoto.features from 0.1.0 to 0.2.0',
     '0.3.0': 'Update marugoto.features from 0.2.0 to 0.3.0',
     '0.4.0': 'Add marugoto.stats.categorical',
+    '0.4.1': 'Update marugoto.features from 0.3.0 to 0.3.1',
 }
