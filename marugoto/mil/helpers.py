@@ -46,7 +46,7 @@ def train_categorical_model_(
     # not used during actual training
     from datetime import datetime
     info = {
-        'description': 'training on tile features',
+        'description': 'MIL training',
         'clini': str(Path(clini_excel).absolute()),
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
@@ -190,7 +190,7 @@ def categorical_crossval_(
     # just a big fat object to dump all kinds of info into for later reference
     # not used during actual training
     info = {
-        'description': 'cross-validation on tile features',
+        'description': 'MIL cross-validation',
         'clini': str(Path(clini_excel).absolute()),
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
@@ -218,6 +218,11 @@ def categorical_crossval_(
     slide_df = pd.DataFrame(slides, columns=['slide_path'])
     slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
     df = df.merge(slide_df, on='FILENAME')
+
+    # reduce to one row per patient with list of slides in `df['slide_path']`
+    patient_df = df.groupby('PATIENT').first().drop(columns='slide_path')
+    patient_slides = df.groupby('PATIENT').slide_path.apply(list)
+    df = patient_df.merge(patient_slides, left_on='PATIENT', right_index=True).reset_index()
 
     info['class distribution'] = {'overall': {
         k: int(v) for k, v in df[target_label].value_counts().items()}}
@@ -255,7 +260,6 @@ def categorical_crossval_(
                 target_label=target_label, target_enc=target_enc)
             learn.export()
 
-        from marugoto.features import deploy
         fold_test_df = df.iloc[test_idxs]
         patient_preds_df = deploy(test_df=fold_test_df, learn=learn, target_label=target_label)
         patient_preds_df.to_csv(preds_csv, index=False)
@@ -263,15 +267,14 @@ def categorical_crossval_(
 
 def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc):
     """Helper function for training the folds."""
+    assert fold_df.PATIENT.nunique() == len(fold_df)
     fold_path.mkdir(exist_ok=True, parents=True)
-
-    patient_df = fold_df.groupby('PATIENT').first()
 
     info['class distribution'][f'fold {fold}'] = {'overall': {
         k: int(v) for k, v in fold_df[target_label].value_counts().items()}}
 
     train_patients, valid_patients = train_test_split(
-        patient_df.PATIENT, stratify=patient_df[target_label])
+        fold_df.PATIENT, stratify=fold_df[target_label])
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
 
@@ -280,7 +283,6 @@ def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc)
     info['class distribution'][f'fold {fold}']['validation'] = {
         k: int(v) for k, v in valid_df[target_label].value_counts().items()}
 
-    from marugoto.features import train
     learn = train(
         target_enc=target_enc,
         train_bags=train_df.slide_path.values,
