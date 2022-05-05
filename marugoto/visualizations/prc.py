@@ -29,8 +29,8 @@ def plot_precision_recall_curve(
     Returns:
         The area under the curve.
     """
-    fpr, tpr, _ = precision_recall_curve(y_true, y_pred)
-    ax.plot(fpr, tpr)
+    precision, recall, _ = precision_recall_curve(y_true, y_pred)
+    ax.plot(recall, precision)
 
     style_auc(ax, baseline=y_true.sum()/len(y_true))
 
