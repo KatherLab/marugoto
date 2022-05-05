@@ -1,16 +1,22 @@
 from datetime import datetime
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from pyexpat import features
+from typing import Iterable, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold, train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from fastai.vision.learner import load_learner
 import torch
 
+from marugoto.data import SKLearnEncoder
+
 from ._mil import train, deploy
+from .data import get_cohort_df
 
 __all__ = [
     'train_categorical_model_', 'deploy_categorical_model_', 'categorical_crossval_']
@@ -20,12 +26,15 @@ PathLike = Union[str, Path]
 
 
 def train_categorical_model_(
-        clini_excel: PathLike,
-        slide_csv: PathLike,
-        feature_dir: PathLike,
-        target_label: str,
-        output_path: PathLike,
-        categories: Optional[Iterable[str]] = None,
+    clini_excel: PathLike,
+    slide_csv: PathLike,
+    feature_dir: PathLike,
+    output_path: PathLike,
+    *,
+    target_label: str,
+    cat_labels: Sequence[str] = [],
+    cont_labels: Sequence[str] = [],
+    categories: Optional[Iterable[str]] = None,
 ) -> None:
     """Train a categorical model on a cohort's tile's features.
 
@@ -51,6 +60,8 @@ def train_categorical_model_(
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
         'target_label': str(target_label),
+        'cat_labels': [str(c) for c in cat_labels],
+        'cont_labels': [str(c) for c in cont_labels],
         'output_path': str(output_path.absolute()),
         'datetime': datetime.now().astimezone().isoformat()}
 
@@ -66,23 +77,13 @@ def train_categorical_model_(
     # filter na, infer categories if not given
     df = df.dropna(subset=target_label)
 
+    # TODO move into get_cohort_df
     if not categories:
         categories = df[target_label].unique()
     categories = np.array(categories)
     info['categories'] = list(categories)
 
-    df = df[df[target_label].isin(categories)]
-
-    slides = set(feature_dir.glob('*.h5'))
-    # remove slides we don't have
-    slide_df = pd.DataFrame(slides, columns=['slide_path'])
-    slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
-    df = df.merge(slide_df, on='FILENAME')
-
-    # reduce to one row per patient with list of slides in `df['slide_path']`
-    patient_df = df.groupby('PATIENT').first().drop(columns='slide_path')
-    patient_slides = df.groupby('PATIENT').slide_path.apply(list)
-    df = patient_df.merge(patient_slides, left_on='PATIENT', right_index=True).reset_index()
+    df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label, categories)
 
     print('Overall distribution')
     print(df[target_label].value_counts())
@@ -99,29 +100,67 @@ def train_categorical_model_(
     info['class distribution']['validation'] = {
         k: int(v) for k, v in valid_df[target_label].value_counts().items()}
 
-    target_enc = OneHotEncoder(sparse=False).fit(categories.reshape(-1, 1))
-
     with open(output_path/'info.json', 'w') as f:
         json.dump(info, f)
 
+    target_enc = OneHotEncoder(sparse=False).fit(categories.reshape(-1, 1))
+
+    add_features = []
+    if cat_labels: add_features.append((_make_cat_enc(train_df, cat_labels), df[cat_labels].values))
+    if cont_labels: add_features.append((_make_cont_enc(train_df, cont_labels), df[cont_labels].values))
+
     learn = train(
-        target_enc=target_enc,
-        train_bags=train_df.slide_path.values,
-        train_targets=train_df[target_label].values,
-        valid_bags=valid_df.slide_path.values,
-        valid_targets=valid_df[target_label].values,
-        path=output_path)
+        bags=df.slide_path.values,
+        targets=(target_enc, df['isMSIH'].values),
+        add_features=add_features,
+        valid_idxs=df.PATIENT.isin(valid_patients).values,
+        path=output_path,
+    )
+
+    # save some additional information to the learner to make deployment easier
+    learn.target_label = target_label
+    learn.cat_labels, learn.cont_labels = cat_labels, cont_labels
 
     learn.export()
 
 
+def _make_cat_enc(df, cats) -> SKLearnEncoder:
+    # create a scaled one-hot encoder for the categorical values
+    #
+    # due to weirdeties in sklearn's OneHotEncoder.fit we fill NAs with other values
+    # randomly sampled with the same probability as their distribution in the
+    # dataset.  This is necessary for correctly determining StandardScaler's weigth
+    fitting_cats = []
+    for cat in cats:
+        weights = df[cat].value_counts(normalize=True)
+        non_na_samples = df[cat].fillna(pd.Series(np.random.choice(weights.index, len(df), p=weights)))
+        fitting_cats.append(non_na_samples)
+    cat_samples = np.stack(fitting_cats, axis=1)
+    cat_enc = make_pipeline(
+        OneHotEncoder(sparse=False, handle_unknown='ignore'),
+        StandardScaler(),
+    ).fit(cat_samples)
+    return cat_enc
+
+
+def _make_cont_enc(df, conts) -> SKLearnEncoder:
+    cont_enc = make_pipeline(
+        StandardScaler(),
+        SimpleImputer(fill_value=0)
+    ).fit(df[conts].values)
+    return cont_enc
+
+
 def deploy_categorical_model_(
-        clini_excel: PathLike,
-        slide_csv: PathLike,
-        feature_dir: PathLike,
-        target_label: str,
-        model_path: PathLike,
-        output_path: PathLike,
+    clini_excel: PathLike,
+    slide_csv: PathLike,
+    feature_dir: PathLike,
+    model_path: PathLike,
+    output_path: PathLike,
+    *,
+    target_label: Optional[str] = None,
+    cat_labels: Optional[str] = None,
+    cont_labels: Optional[str] = None,
 ) -> None:
     """Deploy a categorical model on a cohort's tile's features.
 
@@ -140,26 +179,15 @@ def deploy_categorical_model_(
         print(f'{preds_csv} already exists!  Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_excel)
-    slide_df = pd.read_csv(slide_csv)
-    test_df = clini_df.merge(slide_df, on='PATIENT')
-
     learn = load_learner(model_path)
     target_enc = learn.dls.train.dataset._datasets[-1].encode
     categories = target_enc.categories_[0]
 
-    # remove uninteresting
-    test_df = test_df[test_df[target_label].isin(categories)]
-    # remove slides we don't have
-    slides = set(feature_dir.glob('*.h5'))
-    slide_df = pd.DataFrame(slides, columns=['slide_path'])
-    slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
-    test_df = test_df.merge(slide_df, on='FILENAME')
+    target_label = target_label or learn.target_label
+    cat_labels = cat_labels or learn.cat_labels
+    cont_labels = cont_labels or learn.cont_labels
 
-    # reduce to one row per patient with list of slides in `df['slide_path']`
-    patient_df = test_df.groupby('PATIENT').first().drop(columns='slide_path')
-    patient_slides = test_df.groupby('PATIENT').slide_path.apply(list)
-    test_df = patient_df.merge(patient_slides, left_on='PATIENT', right_index=True).reset_index()
+    test_df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label, categories)
 
     patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -167,9 +195,13 @@ def deploy_categorical_model_(
 
 
 def categorical_crossval_(
-        clini_excel: PathLike, slide_csv: PathLike,
-        feature_dir: PathLike, target_label: str, output_path: PathLike,
-        n_splits: int = 5, categories=None
+    clini_excel: PathLike, slide_csv: PathLike, feature_dir: PathLike, output_path: PathLike,
+    *,
+    target_label: str,
+    cat_labels: Sequence[str] = [],
+    cont_labels: Sequence[str] = [],
+    n_splits: int = 5,
+    categories: Optional[Iterable[str]] = None,
 ) -> None:
     """Performs a cross-validation for a categorical target.
 
@@ -195,6 +227,8 @@ def categorical_crossval_(
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
         'target_label': str(target_label),
+        'cat_labels': [str(c) for c in cat_labels],
+        'cont_labels': [str(c) for c in cont_labels],
         'output_path': str(output_path.absolute()),
         'n_splits': n_splits,
         'datetime': datetime.now().astimezone().isoformat()}
@@ -211,18 +245,7 @@ def categorical_crossval_(
     categories = np.array(categories)
     info['categories'] = list(categories)
 
-    df = df[df[target_label].isin(categories)]
-
-    slides = set(feature_dir.glob('*.h5'))
-    # remove slides we don't have
-    slide_df = pd.DataFrame(slides, columns=['slide_path'])
-    slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
-    df = df.merge(slide_df, on='FILENAME')
-
-    # reduce to one row per patient with list of slides in `df['slide_path']`
-    patient_df = df.groupby('PATIENT').first().drop(columns='slide_path')
-    patient_slides = df.groupby('PATIENT').slide_path.apply(list)
-    df = patient_df.merge(patient_slides, left_on='PATIENT', right_index=True).reset_index()
+    df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label, categories)
 
     info['class distribution'] = {'overall': {
         k: int(v) for k, v in df[target_label].value_counts().items()}}
@@ -240,8 +263,9 @@ def categorical_crossval_(
     info['folds'] = [
         {
             part: list(df.PATIENT[folds[fold][i]])
-            for i, part in enumerate(['train', 'test'])}
-        for fold in range(n_splits)]
+            for i, part in enumerate(['train', 'test'])
+        }
+        for fold in range(n_splits) ]
 
     with open(output_path/'info.json', 'w') as f:
         json.dump(info, f)
@@ -257,15 +281,20 @@ def categorical_crossval_(
             fold_train_df = df.iloc[train_idxs]
             learn = _crossval_train(
                 fold_path=fold_path, fold_df=fold_train_df, fold=fold, info=info,
-                target_label=target_label, target_enc=target_enc)
+                target_label=target_label, target_enc=target_enc,
+                cat_labels=cat_labels, cont_labels=cont_labels)
             learn.export()
 
         fold_test_df = df.iloc[test_idxs]
-        patient_preds_df = deploy(test_df=fold_test_df, learn=learn, target_label=target_label)
+        patient_preds_df = deploy(
+            test_df=fold_test_df, learn=learn,
+            target_label=target_label, cat_labels=cat_labels, cont_labels=cont_labels)
         patient_preds_df.to_csv(preds_csv, index=False)
 
 
-def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc):
+def _crossval_train(
+    *, fold_path, fold_df, fold, info, target_label, target_enc, cat_labels, cont_labels
+):
     """Helper function for training the folds."""
     assert fold_df.PATIENT.nunique() == len(fold_df)
     fold_path.mkdir(exist_ok=True, parents=True)
@@ -283,12 +312,17 @@ def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc)
     info['class distribution'][f'fold {fold}']['validation'] = {
         k: int(v) for k, v in valid_df[target_label].value_counts().items()}
 
+    add_features = []
+    if cat_labels: add_features.append((_make_cat_enc(train_df, cat_labels), fold_df[cat_labels].values))
+    if cont_labels: add_features.append((_make_cont_enc(train_df, cont_labels), fold_df[cont_labels].values))
+
     learn = train(
-        target_enc=target_enc,
-        train_bags=train_df.slide_path.values,
-        train_targets=train_df[target_label].values,
-        valid_bags=valid_df.slide_path.values,
-        valid_targets=valid_df[target_label].values,
+        bags=fold_df.slide_path.values,
+        targets=(target_enc, fold_df[target_label].values),
+        add_features=add_features,
+        valid_idxs=fold_df.PATIENT.isin(valid_patients),
         path=fold_path)
+    learn.target_label = target_label
+    learn.cat_labels, learn.cont_labels = cat_labels, cont_labels
 
     return learn
