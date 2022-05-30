@@ -8,6 +8,11 @@ An implementation of
     International conference on machine learning. PMLR, 2018.
 """
 
+from ._mil import *
+from . import data
+from . import helpers
+from . import model
+
 __author__ = 'Marko van Treeck'
 __copyright__ = 'Copyright 2022, Kather Lab'
 __license__ = 'MIT'
