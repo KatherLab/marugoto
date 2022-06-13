@@ -44,7 +44,8 @@ def _get_coords(filename) -> Optional[np.ndarray]:
 
 
 def extract_features_(
-    *slide_tile_paths: Path, outdir: Path, augmented_repetitions: int = 0
+    *slide_tile_paths: Path, outdir: Path, augmented_repetitions: int = 0,
+    model=None,
 ) -> None:
     """Extracts features from slide tiles.
     
@@ -57,8 +58,9 @@ def extract_features_(
             only one, non-augmentation iteration will be done.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = models.resnet18(pretrained=True)
-    model.fc = nn.Identity()
+    if not model:
+        model = models.resnet18(pretrained=True)
+        model.fc = nn.Identity()
     model = model.half().eval().to(device)
     normal_transform = transforms.Compose([
         transforms.Resize(224),
