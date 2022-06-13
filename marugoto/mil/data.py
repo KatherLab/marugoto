@@ -40,7 +40,7 @@ class BagDataset(Dataset):
         for bag_file in self.bags[index]:
             with h5py.File(bag_file, 'r') as f:
                 feats.append(torch.from_numpy(f['feats'][:]))
-        feats = torch.concat(feats)
+        feats = torch.concat(feats).float()
 
         # sample a subset, if required
         if self.bag_size:
@@ -73,6 +73,9 @@ def make_dataset(
     else:
         return _make_basic_dataset(
             bags=bags, target_enc=targets[0], targs=targets[1], bag_size=bag_size)
+
+def get_target_enc(mil_learn):
+    return mil_learn.dls.train.dataset._datasets[-1].encode
 
 
 def _make_basic_dataset(

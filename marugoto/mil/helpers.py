@@ -16,7 +16,7 @@ import torch
 from marugoto.data import SKLearnEncoder
 
 from ._mil import train, deploy
-from .data import get_cohort_df
+from .data import get_cohort_df, get_target_enc
 
 __all__ = [
     'train_categorical_model_', 'deploy_categorical_model_', 'categorical_crossval_']
@@ -70,7 +70,7 @@ def train_categorical_model_(
         print(f'{model_path} already exists. Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_excel)
+    clini_df = pd.read_csv(clini_excel)
     slide_df = pd.read_csv(slide_csv)
     df = clini_df.merge(slide_df, on='PATIENT')
 
@@ -94,6 +94,8 @@ def train_categorical_model_(
     train_patients, valid_patients = train_test_split(df.PATIENT, stratify=df[target_label])
     train_df = df[df.PATIENT.isin(train_patients)]
     valid_df = df[df.PATIENT.isin(valid_patients)]
+    train_df.drop(columns='slide_path').to_csv(output_path/'train.csv', index=False)
+    valid_df.drop(columns='slide_path').to_csv(output_path/'valid.csv', index=False)
 
     info['class distribution']['training'] = {
         k: int(v) for k, v in train_df[target_label].value_counts().items()}
@@ -111,7 +113,7 @@ def train_categorical_model_(
 
     learn = train(
         bags=df.slide_path.values,
-        targets=(target_enc, df['isMSIH'].values),
+        targets=(target_enc, df[target_label].values),
         add_features=add_features,
         valid_idxs=df.PATIENT.isin(valid_patients).values,
         path=output_path,
@@ -180,7 +182,7 @@ def deploy_categorical_model_(
         return
 
     learn = load_learner(model_path)
-    target_enc = learn.dls.train.dataset._datasets[-1].encode
+    target_enc = get_target_enc(learn)
     categories = target_enc.categories_[0]
 
     target_label = target_label or learn.target_label
@@ -286,6 +288,7 @@ def categorical_crossval_(
             learn.export()
 
         fold_test_df = df.iloc[test_idxs]
+        fold_test_df.drop(columns='slide_path').to_csv(fold_path/'test.csv', index=False)
         patient_preds_df = deploy(
             test_df=fold_test_df, learn=learn,
             target_label=target_label, cat_labels=cat_labels, cont_labels=cont_labels)
@@ -306,6 +309,8 @@ def _crossval_train(
         fold_df.PATIENT, stratify=fold_df[target_label])
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
+    train_df.drop(columns='slide_path').to_csv(fold_path/'train.csv', index=False)
+    valid_df.drop(columns='slide_path').to_csv(fold_path/'valid.csv', index=False)
 
     info['class distribution'][f'fold {fold}']['training'] = {
         k: int(v) for k, v in train_df[target_label].value_counts().items()}

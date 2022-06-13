@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset
 from fastai.vision.all import (
     Learner, DataLoader, DataLoaders, RocAuc,
-    SaveModelCallback, EarlyStoppingCallback, CSVLogger)
+    SaveModelCallback, CSVLogger)
 import pandas as pd
 
 from marugoto.data import SKLearnEncoder
@@ -63,7 +63,7 @@ def train(
 
     # build dataloaders
     train_dl = DataLoader(
-        train_ds, batch_size=64, shuffle=True, num_workers=os.cpu_count())
+        train_ds, batch_size=64, shuffle=True, num_workers=1)
     valid_dl = DataLoader(
         valid_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count())
     batch = train_dl.one_batch()
