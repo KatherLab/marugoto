@@ -157,8 +157,8 @@ def get_cohort_df(
     clini_excel: Path, slide_csv: Path, feature_dir: str,
     target_label: str, categories: Iterable[str]
 ) -> pd.DataFrame:
-    clini_df = pd.read_excel(clini_excel)
-    slide_df = pd.read_csv(slide_csv)
+    clini_df = pd.read_excel(clini_excel, dtype=str)
+    slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
     # remove uninteresting
