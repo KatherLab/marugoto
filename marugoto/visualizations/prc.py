@@ -116,10 +116,10 @@ def plot_precision_recall_curves_(
     """
     import pandas as pd
     from pathlib import Path
-    pred_dfs = [pd.read_csv(p) for p in pred_csvs]
+    pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
 
     y_trues = [df[target_label] == true_label for df in pred_dfs]
-    y_preds = [df[f'{target_label}_{true_label}'] for df in pred_dfs]
+    y_preds = [pd.to_numeric(df[f'{target_label}_{true_label}']) for df in pred_dfs]
     title = f'{target_label} = {true_label}'
     fig, ax = plt.subplots()
     if len(pred_dfs) == 1:

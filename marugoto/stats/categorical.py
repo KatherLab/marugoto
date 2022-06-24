@@ -15,22 +15,23 @@ __maintainer__ = 'Marko van Treeck'
 __email__ = 'mvantreeck@ukaachen.de'
 
 
-__all__ = ['categorical', 'aggregate_categorical_stats', 'categorical_aggregated_']
+__all__ = ['categorical', 'aggregate_categorical_stats',
+           'categorical_aggregated_']
 
 
 score_labels = ['roc_auc_score', 'average_precision_score', 'p_value', 'count']
 
 
-
 def categorical(preds_df: pd.DataFrame, target_label: str) -> pd.DataFrame:
     """Calculates some stats for categorical prediction tables.
-    
+
     This will calculate the number of items, the AUROC, AUPRC and p value
     for a prediction file.
     """
     categories = preds_df[target_label].unique()
     y_true = preds_df[target_label]
-    y_pred = preds_df[[f'{target_label}_{cat}' for cat in categories]].values
+    y_pred = preds_df[[pd.to_numeric(
+        f'{target_label}_{cat}') for cat in categories]].values
 
     stats_df = pd.DataFrame(index=categories)
 
@@ -82,14 +83,15 @@ def categorical_aggregated_(*preds_csvs: str, outpath: str, target_label: str) -
         preds_csvs:  CSV files containing predictions.
         outpath:  Path to save the results to.
         target_label:  Label to compute the predictions for.
-    
+
     This will apply `categorical` to all of the given `preds_csvs` and
     calculate the mean and 95% confidence interval for all the scores as
     well as sum the total instane count for each class.
     """
     outpath = Path(outpath)
     preds_dfs = {
-        Path(p).parent.name: categorical(pd.read_csv(p), target_label)
+        Path(p).parent.name: categorical(
+            pd.read_csv(p, dtype=str), target_label)
         for p in preds_csvs}
     preds_df = pd.concat(preds_dfs).sort_index()
     preds_df.to_csv(outpath/f'{target_label}-categorical-stats-individual.csv')

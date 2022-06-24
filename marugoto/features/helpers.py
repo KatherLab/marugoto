@@ -59,8 +59,8 @@ def train_categorical_model_(
         print(f'{model_path} already exists. Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_excel)
-    slide_df = pd.read_csv(slide_csv)
+    clini_df = pd.read_excel(clini_excel, dtype=str)
+    slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
     # filter na, infer categories if not given
@@ -139,8 +139,8 @@ def deploy_categorical_model_(
         print(f'{preds_csv} already exists!  Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_excel)
-    slide_df = pd.read_csv(slide_csv)
+    clini_df = pd.read_excel(clini_excel, dtype=str)
+    slide_df = pd.read_csv(slide_csv, dtype=str)
     test_df = clini_df.merge(slide_df, on='PATIENT')
 
     learn = load_learner(model_path)
@@ -193,8 +193,8 @@ def categorical_crossval_(
         'n_splits': n_splits,
         'datetime': datetime.now().astimezone().isoformat()}
 
-    clini_df = pd.read_excel(clini_excel)
-    slide_df = pd.read_csv(slide_csv)
+    clini_df = pd.read_excel(clini_excel, dtype=str)
+    slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
     # filter na, infer categories if not given
