@@ -125,6 +125,7 @@ def plot_roc_curves_(
     else:
         plot_roc_curves(ax, y_trues, y_preds, title=title)
     fig.savefig(Path(outpath)/f'roc-{target_label}={true_label}.svg')
+    plt.close(fig)
 
 
 if __name__ == '__main__':

@@ -128,6 +128,7 @@ def plot_precision_recall_curves_(
         plot_precision_recall_curves(ax, y_trues, y_preds, title=title)
 
     fig.savefig(Path(outpath)/f'prc-{target_label}={true_label}.svg')
+    plt.close(fig)
 
 
 if __name__ == '__main__':
