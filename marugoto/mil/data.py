@@ -154,20 +154,21 @@ def _attach_add_to_bag_and_zip_with_targ(bag, add, targ):
 
 
 def get_cohort_df(
-    clini_excel: Path, slide_csv: Path, feature_dir: str,
+    clini_table: Path, slide_csv: Path, feature_dir: str,
     target_label: str, categories: Iterable[str]
 ) -> pd.DataFrame:
-    clini_df = pd.read_excel(clini_excel, dtype=str)
+    clini_df = pd.read_csv(clini_table, dtype=str) if Path(clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
     # remove uninteresting
     df = df[df[target_label].isin(categories)]
     # remove slides we don't have
-    slides = set(feature_dir.glob('*.h5'))
-    slide_df = pd.DataFrame(slides, columns=['slide_path'])
-    slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
-    df = df.merge(slide_df, on='FILENAME')
+    h5s = set(feature_dir.glob('*.h5'))
+    assert h5s, f'no features found in {feature_dir}!'
+    h5_df = pd.DataFrame(h5s, columns=['slide_path'])
+    h5_df['FILENAME'] = h5_df.slide_path.map(lambda p: p.stem)
+    df = df.merge(h5_df, on='FILENAME')
 
     # reduce to one row per patient with list of slides in `df['slide_path']`
     patient_df = df.groupby('PATIENT').first().drop(columns='slide_path')

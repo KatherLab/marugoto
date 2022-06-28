@@ -30,8 +30,7 @@ def categorical(preds_df: pd.DataFrame, target_label: str) -> pd.DataFrame:
     """
     categories = preds_df[target_label].unique()
     y_true = preds_df[target_label]
-    y_pred = preds_df[[pd.to_numeric(
-        f'{target_label}_{cat}') for cat in categories]].values
+    y_pred = preds_df[[f'{target_label}_{cat}' for cat in categories]].applymap(float).values
 
     stats_df = pd.DataFrame(index=categories)
 

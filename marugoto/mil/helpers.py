@@ -26,7 +26,7 @@ PathLike = Union[str, Path]
 
 
 def train_categorical_model_(
-    clini_excel: PathLike,
+    clini_table: PathLike,
     slide_csv: PathLike,
     feature_dir: PathLike,
     output_path: PathLike,
@@ -39,7 +39,7 @@ def train_categorical_model_(
     """Train a categorical model on a cohort's tile's features.
 
     Args:
-        clini_excel:  Path to the clini table.
+        clini_table:  Path to the clini table.
         slide_csv:  Path to the slide tabel.
         target_label:  Label to train for.
         categories:  Categories to train for, or all categories appearing in the
@@ -56,7 +56,7 @@ def train_categorical_model_(
     from datetime import datetime
     info = {
         'description': 'MIL training',
-        'clini': str(Path(clini_excel).absolute()),
+        'clini': str(Path(clini_table).absolute()),
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
         'target_label': str(target_label),
@@ -70,7 +70,7 @@ def train_categorical_model_(
         print(f'{model_path} already exists. Skipping...')
         return
 
-    clini_df = pd.read_csv(clini_excel, dtype=str)
+    clini_df = pd.read_csv(clini_table, dtype=str) if Path(clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
@@ -83,7 +83,7 @@ def train_categorical_model_(
     categories = np.array(categories)
     info['categories'] = list(categories)
 
-    df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label, categories)
+    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
     print('Overall distribution')
     print(df[target_label].value_counts())
@@ -154,7 +154,7 @@ def _make_cont_enc(df, conts) -> SKLearnEncoder:
 
 
 def deploy_categorical_model_(
-    clini_excel: PathLike,
+    clini_table: PathLike,
     slide_csv: PathLike,
     feature_dir: PathLike,
     model_path: PathLike,
@@ -189,7 +189,7 @@ def deploy_categorical_model_(
     cat_labels = cat_labels or learn.cat_labels
     cont_labels = cont_labels or learn.cont_labels
 
-    test_df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label, categories)
+    test_df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
     patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
