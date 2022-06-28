@@ -3,7 +3,7 @@ import hashlib
 import torchvision
 import torch
 from fire import Fire
-from .imagenet import extract_features_
+from .extract import extract_features_
 
 # use like this:
 # python -m marugoto.extract.ozanciga \
