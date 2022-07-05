@@ -2,13 +2,12 @@
 import os
 import re
 import json
-from typing import Optional
+from typing import Optional, Sequence
 import torch
 from torch.utils.data import Dataset, ConcatDataset
 from pathlib import Path
 import PIL
-from torchvision import models, transforms
-from torch import nn
+from torchvision import transforms
 import numpy as np
 from tqdm import tqdm
 import h5py
@@ -47,8 +46,7 @@ def _get_coords(filename) -> Optional[np.ndarray]:
 
 
 def extract_features_(
-    *slide_tile_paths: Path, outdir: Path, augmented_repetitions: int = 0,
-    model=None, model_name=None,
+    model, model_name, slide_tile_paths: Sequence[Path], outdir: Path, augmented_repetitions: int = 0,
 ) -> None:
     """Extracts features from slide tiles.
 
@@ -60,15 +58,6 @@ def extract_features_(
             dataset with augmentation should be performed.  0 means that
             only one, non-augmentation iteration will be done.
     """
-    if not model:
-        model = models.resnet18(pretrained=True)
-        model.fc = nn.Identity()
-        model_name = 'resnet18-imagenet'
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        model = model.eval().to(device)
-    elif not model_name:
-        raise ValueError('`model_name` has to specified when supplying a custom model.')
-
     normal_transform = transforms.Compose([
         transforms.Resize(224),
         transforms.CenterCrop(224),
@@ -90,7 +79,8 @@ def extract_features_(
     outdir.mkdir(exist_ok=True, parents=True)
     extractor_string = f'marugoto-extract-v{__version__}_{model_name}'
     with open(outdir/'info.json', 'w') as f:
-        json.dump({'extractor': extractor_string, 'augmented_repetitions': augmented_repetitions}, f)
+        json.dump({'extractor': extractor_string,
+                  'augmented_repetitions': augmented_repetitions}, f)
 
     for slide_tile_path in tqdm(slide_tile_paths):
         slide_tile_path = Path(slide_tile_path)
@@ -104,19 +94,22 @@ def extract_features_(
 
         unaugmented_ds = SlideTileDataset(slide_tile_path, normal_transform)
         augmented_ds = SlideTileDataset(slide_tile_path, augmenting_transform,
-                                repetitions=augmented_repetitions)
+                                        repetitions=augmented_repetitions)
         ds = ConcatDataset([unaugmented_ds, augmented_ds])
         dl = torch.utils.data.DataLoader(
             ds, batch_size=64, shuffle=False, num_workers=os.cpu_count(), drop_last=False)
 
         feats = []
         for batch in tqdm(dl, leave=False):
-            feats.append(model(batch.type_as(next(model.parameters()))).half().cpu().detach())
+            feats.append(
+                model(batch.type_as(next(model.parameters()))).half().cpu().detach())
 
         with h5py.File(h5outpath, 'w') as f:
-            f['coords'] = [_get_coords(fn) for fn in unaugmented_ds.tiles] + [_get_coords(fn) for fn in augmented_ds.tiles]
+            f['coords'] = [_get_coords(
+                fn) for fn in unaugmented_ds.tiles] + [_get_coords(fn) for fn in augmented_ds.tiles]
             f['feats'] = torch.concat(feats).cpu().numpy()
-            f['augmented'] = np.repeat([False, True], [len(unaugmented_ds), len(augmented_ds)])
+            f['augmented'] = np.repeat(
+                [False, True], [len(unaugmented_ds), len(augmented_ds)])
             assert len(f['feats']) == len(f['augmented'])
             f.attrs['extractor'] = extractor_string
 
