@@ -17,7 +17,6 @@ __all__ = ['extract_ozanciga_features']
 
 
 def load_model_weights(model, weights):
-
     model_dict = model.state_dict()
     weights = {k: v for k, v in weights.items() if k in model_dict}
     if weights == {}:
