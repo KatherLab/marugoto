@@ -11,6 +11,7 @@ use like this:
 """
 
 import hashlib
+from pathlib import Path
 import torch
 import torchvision
 import torch.nn as nn
@@ -18,7 +19,7 @@ from fire import Fire
 from .extract import extract_features_
 
 
-def extract_xiyuewang_features_(checkpoint_path: str, *args, **kwargs):
+def extract_xiyuewang_features_(*slide_tile_paths: Path, checkpoint_path: str, **kwargs):
     """Extracts features from slide tiles.
 
     Args:
@@ -41,7 +42,7 @@ def extract_xiyuewang_features_(checkpoint_path: str, *args, **kwargs):
     model.fc = nn.Identity()
     model.load_state_dict(pretext_model, strict=True)
 
-    return extract_features_(*args, **kwargs, model=model.cuda(), model_name='xiyuewang-931956f3')
+    return extract_features_(slide_tile_paths=slide_tile_paths, model=model.cuda(), model_name='xiyuewang-931956f3', **kwargs)
 
 
 if __name__ == '__main__':

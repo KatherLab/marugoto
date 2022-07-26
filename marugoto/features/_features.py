@@ -42,7 +42,7 @@ def make_dataset(
     ys = np.repeat(targets, lens)
     ds = ZipDataset(
         tile_ds,
-        EncodedDataset(target_enc, ys, dtype=torch.float32))    # type: ignore
+        EncodedDataset(target_enc, ys, dtype=torch.float32)) #     type: ignore
     return ds
 
 
@@ -111,6 +111,7 @@ def train(
         valid_bags:  H5s containing the bags to validate on.
         train_targets:  The ground thruths of the validation bags.
     """
+    print(type(target_enc))
     train_ds = make_dataset(target_enc, train_bags, train_targets)
     valid_ds = make_dataset(target_enc, valid_bags, valid_targets, seed=0)
 
@@ -121,9 +122,7 @@ def train(
         valid_ds, batch_size=512, shuffle=False, num_workers=os.cpu_count())
     batch = train_dl.one_batch()
 
-    model = nn.Sequential(
-        create_head(batch[0].shape[-1], batch[1].shape[-1], concat_pool=False)[1:],
-        nn.Softmax(dim=1))
+    model = create_head(batch[0].shape[-1], batch[1].shape[-1], concat_pool=False)[1:]
 
     # weigh inversely to class occurances
     counts = pd.value_counts(train_targets)
@@ -161,7 +160,7 @@ def deploy(test_df, learn, target_label):
     test_dl = DataLoader(
         test_ds, batch_size=512, shuffle=False, num_workers=os.cpu_count())
 
-    patient_preds, patient_targs = learn.get_preds(dl=test_dl)
+    patient_preds, patient_targs = learn.get_preds(dl=test_dl, act=nn.Softmax())
 
     # create tile wise result dataframe
     tiles_per_slide = [len(ds) for ds in test_ds._datasets[0].datasets]

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Sequence, Tuple, TypeVar
+from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 from pathlib import Path
 import h5py
 import torch
@@ -154,7 +154,7 @@ def _attach_add_to_bag_and_zip_with_targ(bag, add, targ):
 
 
 def get_cohort_df(
-    clini_table: Path, slide_csv: Path, feature_dir: str,
+    clini_table: Union[Path, str], slide_csv: Union[Path, str], feature_dir: Union[Path, str],
     target_label: str, categories: Iterable[str]
 ) -> pd.DataFrame:
     clini_df = pd.read_csv(clini_table, dtype=str) if Path(clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)

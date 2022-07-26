@@ -87,7 +87,7 @@ def train_categorical_model_(
 
     print('Overall distribution')
     print(df[target_label].value_counts())
-    info['class distribution'] = {'overall': {
+    info['class distribution'] = {'overall': {  # type: ignore
         k: int(v) for k, v in df[target_label].value_counts().items()}}
 
     # Split off validation set
@@ -97,9 +97,9 @@ def train_categorical_model_(
     train_df.drop(columns='slide_path').to_csv(output_path/'train.csv', index=False)
     valid_df.drop(columns='slide_path').to_csv(output_path/'valid.csv', index=False)
 
-    info['class distribution']['training'] = {
+    info['class distribution']['training'] = {      # type: ignore
         k: int(v) for k, v in train_df[target_label].value_counts().items()}
-    info['class distribution']['validation'] = {
+    info['class distribution']['validation'] = {    # type: ignore
         k: int(v) for k, v in valid_df[target_label].value_counts().items()}
 
     with open(output_path/'info.json', 'w') as f:
@@ -235,7 +235,7 @@ def categorical_crossval_(
         'n_splits': n_splits,
         'datetime': datetime.now().astimezone().isoformat()}
 
-    clini_df = pd.read_excel(clini_excel, dtype=str)
+    clini_df = pd.read_csv(clini_excel, dtype=str) if Path(clini_excel).suffix == '.csv' else pd.read_excel(clini_excel, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 

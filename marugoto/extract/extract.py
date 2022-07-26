@@ -46,7 +46,8 @@ def _get_coords(filename) -> Optional[np.ndarray]:
 
 
 def extract_features_(
-    model, model_name, slide_tile_paths: Sequence[Path], outdir: Path, augmented_repetitions: int = 0,
+        *,
+        model, model_name, slide_tile_paths: Sequence[Path], outdir: Path, augmented_repetitions: int = 0,
 ) -> None:
     """Extracts features from slide tiles.
 

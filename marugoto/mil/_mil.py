@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Sequence, Tuple, TypeVar
 from pathlib import Path
@@ -13,6 +12,7 @@ from fastai.vision.all import (
     Learner, DataLoader, DataLoaders, RocAuc,
     SaveModelCallback, CSVLogger)
 import pandas as pd
+import numpy as np
 
 from marugoto.data import SKLearnEncoder
 
@@ -29,9 +29,9 @@ T = TypeVar('T')
 def train(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[SKLearnEncoder, Sequence[Any]],
+    targets: Tuple[SKLearnEncoder, np.ndarray],
     add_features: Iterable[Tuple[SKLearnEncoder, Sequence[Any]]] = [],
-    valid_idxs: Iterable[bool],
+    valid_idxs: np.ndarray,
     n_epoch: int = 32,
     patience: int = 16,
     path: Optional[Path] = None,

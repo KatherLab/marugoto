@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Any, Dict, Iterable, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -45,7 +45,7 @@ def train_categorical_model_(
     # just a big fat object to dump all kinds of info into for later reference
     # not used during actual training
     from datetime import datetime
-    info = {
+    info: Dict[str, Any] = {
         'description': 'training on tile features',
         'clini': str(Path(clini_excel).absolute()),
         'slide': str(Path(slide_csv).absolute()),

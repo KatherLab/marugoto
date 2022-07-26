@@ -77,6 +77,7 @@ class ZipDataset(Dataset):
 @dataclass
 class EncodedDataset(Dataset):
     encode: Any
+    dtype = None
 
     def __getitem__(self, i: int) -> Any:
         encoded = torch.tensor(
@@ -137,6 +138,7 @@ class MapDataset(Dataset):
 
 class SKLearnEncoder(Protocol):
     """An sklearn-style encoder."""
+    categories_: Sequence[Sequence[str]]
     def transform(x: Sequence[Sequence[Any]]):
         ...
 
