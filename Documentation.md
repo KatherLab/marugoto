@@ -18,7 +18,7 @@
     
 4. To find out which cuda version is appropriate, run `nvidia-smi` to view the cuda version in the top right-hand corner:
     
-    ![Untitled](Marugoto%20Installation%20and%20Recommended%20Project%20Setu%209841a11083aa4554a4ccb4e1d8544600/Untitled.png)
+    ![Untitled](https://i.imgur.com/hfDViM2.png)
     
 5. [Install Pytorch](https://pytorch.org/get-started/locally/) by using the command provided by the website after selecting the appropriate settings.
 6. Confirm cuda is installed correctly by `python` and then in shell
@@ -48,4 +48,4 @@
     | Results | Features |
 2. A good structure is to have a folder for each main project documents with a symbolic link, scripts and experiment results located within it (see below). To create a symbolic link, using the terminal when inside the project folder, run `ln -s ~/Documents/marugoto/marugoto`
 
-![Untitled](Marugoto%20Installation%20and%20Recommended%20Project%20Setu%209841a11083aa4554a4ccb4e1d8544600/Untitled%201.png)
+    ![Untitled](https://i.imgur.com/0TITTqA.png)
