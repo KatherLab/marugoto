@@ -1,5 +1,7 @@
 # まるごと—A Toolbox for Building Deep Learning Workflows ##
 
+Note: for more information regarding setting up marugoto on your system and file management for your project, see [documentation](https://github.com/KatherLab/marugoto/blob/main/Documentation.md).
+
 ## Tile-Wise Training and Deployment ##
 
 ### Train a Neural Network on Pre-Extracted Features ###
