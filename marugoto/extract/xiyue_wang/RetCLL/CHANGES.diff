@@ -1,0 +1,28 @@
+Changes made in comparison to <https://github.com/Xiyue-Wang/RetCCL/commit/989dda8f06cef057ccf689b72e20c3394a8407b1>
+--- a/ResNet.py
++++ b/ResNet.py
+@@ -1,6 +1,6 @@
+ import torch
+ import torch.nn as nn
+-from torchvision.models.utils import load_state_dict_from_url
++from torch.hub import load_state_dict_from_url
+ import torch.nn.functional as F
+ from torch.nn import Parameter
+ 
+@@ -174,6 +174,7 @@ class ResNet(nn.Module):
+             self.att_branch = None
+ 
+         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
++        self.flatten = nn.Flatten(1)
+ 
+         if self.mlp:
+             if self.two_branch:
+@@ -261,7 +262,7 @@ class ResNet(nn.Module):
+             x = x + att_map * x
+ 
+         x = self.avgpool(x)
+-        x = torch.flatten(x, 1)
++        x = self.flatten(x)
+         if self.mlp and self.two_branch:
+             x = self.fc(x)
+             x1 = self.instDis(x)

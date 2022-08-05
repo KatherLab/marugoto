@@ -9,15 +9,17 @@ use like this:
         --outdir ~/TCGA_features/TCGA-CRC-DX-features/xiyue-wang \
         /mnt/TCGA_BLOCKS/TCGA-CRC-DX-BLOCKS/*
 """
-
+# %%
 import hashlib
 from pathlib import Path
 import torch
-import torchvision
 import torch.nn as nn
-from fire import Fire
-from .extract import extract_features_
+from marugoto.extract import extract_features_
+from RetCLL import ResNet
 
+pretext_model = torch.load(r'./best_ckpt.pth')
+
+# %%
 
 def extract_xiyuewang_features_(*slide_tile_paths: Path, checkpoint_path: str, **kwargs):
     """Extracts features from slide tiles.
@@ -37,13 +39,12 @@ def extract_xiyuewang_features_(*slide_tile_paths: Path, checkpoint_path: str, *
 
     assert sha256.hexdigest() == '931956f31d3f1a3f6047f3172b9e59ee3460d29f7c0c2bb219cbc8e9207795ff'
 
-    model = torchvision.models.resnet50()
+    model = ResNet.resnet50(num_classes=128,mlp=False, two_branch=False, normlinear=True)
     pretext_model = torch.load(checkpoint_path)
-    model.fc = nn.Identity()
     model.load_state_dict(pretext_model, strict=True)
+    model.avgpool = nn.Identity()
+    model.flatten = nn.Identity()
+    model.fc = nn.Identity()
 
-    return extract_features_(slide_tile_paths=slide_tile_paths, model=model.cuda(), model_name='xiyuewang-931956f3', **kwargs)
+    return extract_features_(slide_tile_paths=slide_tile_paths, model=model.cuda(), model_name='xiyuewang-retcll-931956f3', **kwargs)
 
-
-if __name__ == '__main__':
-    Fire(extract_xiyuewang_features_)
