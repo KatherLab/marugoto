@@ -96,6 +96,7 @@ def _make_basic_dataset(
 
     return ds
 
+
 def zip_bag_targ(bag, targets):
     features, lengths = bag
     return (
@@ -122,7 +123,7 @@ def _make_multi_input_dataset(
     bag_ds = BagDataset(bags, bag_size=bag_size)
 
     add_ds = MapDataset(
-        _splatter_concat,
+        _splat_concat,
         *[
             EncodedDataset(enc, vals)
             for enc, vals in add_features
@@ -140,7 +141,7 @@ def _make_multi_input_dataset(
     return ds
 
 
-def _splatter_concat(x): return torch.concat(x, dim=1)
+def _splat_concat(*x): return torch.concat(x, dim=1)
 
 def _attach_add_to_bag_and_zip_with_targ(bag, add, targ):
     return (
