@@ -14,10 +14,8 @@ import hashlib
 from pathlib import Path
 import torch
 import torch.nn as nn
-from marugoto.extract import extract_features_
-from RetCLL import ResNet
-
-pretext_model = torch.load(r'./best_ckpt.pth')
+from marugoto.extract.extract import extract_features_
+from .RetCLL import ResNet
 
 # %%
 
@@ -41,10 +39,8 @@ def extract_xiyuewang_features_(*slide_tile_paths: Path, checkpoint_path: str, *
 
     model = ResNet.resnet50(num_classes=128,mlp=False, two_branch=False, normlinear=True)
     pretext_model = torch.load(checkpoint_path)
-    model.load_state_dict(pretext_model, strict=True)
-    model.avgpool = nn.Identity()
-    model.flatten = nn.Identity()
     model.fc = nn.Identity()
+    model.load_state_dict(pretext_model, strict=True)
 
     return extract_features_(slide_tile_paths=slide_tile_paths, model=model.cuda(), model_name='xiyuewang-retcll-931956f3', **kwargs)
 
