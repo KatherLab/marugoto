@@ -5,7 +5,7 @@ from pathlib import Path
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Extract Resnet18 imagenet features from slide.')
     parser.add_argument(
-        'slide_tile_path', type=Path, nargs='+',
+        'slide_tile_paths', metavar='SLIDE_TILE_DIR', type=Path, nargs='+',
         help='A directory with tiles from a slide.')
     parser.add_argument(
         '-o', '--outdir', type=Path, required=True, help='Path to save the features to.')
@@ -13,6 +13,7 @@ if __name__ == '__main__':
         '--augmented-repetitions', type=int, default=0,
         help='Also save augmented feature vectors.')
     args = parser.parse_args()
+    print(f'{args=}')
 
 import torchvision
 import torch
