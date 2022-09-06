@@ -1,13 +1,27 @@
 #!/usr/bin/env python3
+import argparse
+from pathlib import Path
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Extract Resnet18 imagenet features from slide.')
+    parser.add_argument(
+        'slide_tile_path', type=Path, nargs='+',
+        help='A directory with tiles from a slide.')
+    parser.add_argument(
+        '-o', '--outdir', type=Path, required=True, help='Path to save the features to.')
+    parser.add_argument(
+        '--augmented-repetitions', type=int, default=0,
+        help='Also save augmented feature vectors.')
+    args = parser.parse_args()
+
 import torchvision
 import torch
-from fire import Fire
 from .extract import extract_features_
 
 __all__ = ['extract_resnet18_imagenet_features']
 
 
-def extract_resnet18_imagenet_features_(*args, **kwargs):
+def extract_resnet18_imagenet_features_(slide_tile_paths, **kwargs):
     """Extracts features from slide tiles.
 
     Args:
@@ -23,8 +37,8 @@ def extract_resnet18_imagenet_features_(*args, **kwargs):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = model.eval().to(device)
 
-    return extract_features_(*args, **kwargs, model=model, model_name='resnet18-imagenet')
+    return extract_features_(slide_tile_paths=slide_tile_paths, model=model, model_name='resnet18-imagenet', **kwargs)
 
 
 if __name__ == '__main__':
-    Fire(extract_resnet18_imagenet_features_)
+    extract_resnet18_imagenet_features_(**vars(args))
