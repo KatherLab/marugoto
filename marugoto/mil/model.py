@@ -31,8 +31,6 @@ class MILModel(nn.Module):
             #nn.BatchNorm1d(256),
             nn.Dropout(),
             nn.Linear(256, n_out))
-        #self.float() #changed this because of error
-        #RuntimeError: Found dtype Double but expected Float = issue with nn.MSELoss()
 
     #CHANGED
     def forward(self, args): #, weights
@@ -60,13 +58,10 @@ class MILModel(nn.Module):
 
         # Output logits
         # batch_size * 1 <-- a single score for each WSI in the batch
-        scores = (self.head(weighted_embedding_sums)) #.squeeze() #added squeeze to remove dim
-        #scores = torch.reshape(scores, (scores.shape[0], 1)) #playing around
-        #print(scores.shape) # [64] after squeeze for train, [] for valid. dtype is float32
-        # print(torch.softmax(scores, dim=-1))
-        # exit()
+        scores = (self.head(weighted_embedding_sums)) 
 
-        return torch.sigmoid(scores) #*weights #torch.sigmoid(scores) #just scores
+
+        return torch.sigmoid(scores)
 
     #CHANGEDdd
     def _masked_attention_scores(self, embeddings, lens):
@@ -93,9 +88,8 @@ class MILModel(nn.Module):
             attention_scores,
             torch.full_like(attention_scores, -1e10)) #.squeeze())*weights).unsqueeze(-1)
         
-        # print((torch.softmax(masked_attention, dim=0)).shape) #[64, 512, 1]
-        # exit()
-        return torch.softmax(masked_attention, dim=1) #dim=  1  ## batch_size * bag_size * 1
+
+        return torch.softmax(masked_attention, dim=1) # batch_size * bag_size * 1
 
 
 def Attention(n_in: int, n_latent: Optional[int] = None) -> nn.Module:

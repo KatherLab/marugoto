@@ -49,8 +49,7 @@ T = TypeVar('T')
 def train(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: np.ndarray, #Tuple[FunctionTransformer, ]
-    #fold_weights: np.ndarray,
+    targets: np.ndarray,
     add_features: Iterable[Tuple[FunctionTransformer, Sequence[Any]]] = [],
     valid_idxs: np.ndarray,
     n_epoch: int = 25, #32
@@ -88,11 +87,7 @@ def train(
     def weighting_continuous_values(labels) -> torch.FloatTensor:
         
 
-        #edges = np.histogram_bin_edges(labels, bins='auto')
-        # breakpoint()
-        edges = np.array([0.0, 0.02, 0.05, 0.08, 0.13, 0.20, 0.25, 
-            0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60,
-            0.65, 0.70, 0.75, 0.80, 0.85, 1])
+        edges = np.histogram_bin_edges(labels, bins='auto')
         bin_index_per_label = np.array([get_bin_idx(label, edges) for label in labels])
         # calculate empirical (original) label distribution: [Nb,]
         # "Nb" is the number of bins
@@ -120,8 +115,7 @@ def train(
 
     train_ds = make_dataset(
         bags=bags[~valid_idxs.values],
-        targets= (targs[~valid_idxs.values], weights[~valid_idxs.values]),#(target_enc, )
-        #weights=weights[~valid_idxs.values],
+        targets= (targs[~valid_idxs.values], weights[~valid_idxs.values]),
         add_features=[
             (enc, vals[~valid_idxs.values])
             for enc, vals in add_features],
@@ -131,16 +125,12 @@ def train(
     #CHANGED
     valid_ds = make_dataset(
         bags=bags[valid_idxs.values],
-        targets=(targs[valid_idxs.values], weights[valid_idxs.values]), #(target_enc, )
-        #weights=weights[valid_idxs.values],
+        targets=(targs[valid_idxs.values], weights[valid_idxs.values]),
         add_features=[
             (enc, vals[valid_idxs.values])
             for enc, vals in add_features],
         bag_size=None) #None
 
-    # print(valid_ds.__dict__)
-    # print(train_ds.__dict__)
-    # exit()
 
     # import torch.multiprocessing
     # torch.multiprocessing.set_sharing_strategy('file_system')
@@ -153,26 +143,7 @@ def train(
 
     #Graziani et al: batch_size_bag = 1, shuffle=True for both
     batch = train_dl.one_batch()
-    # torch.Size([64, 512, 2048])
-    # torch.Size([1, 2646, 2048])
 
-    # print(train_dl.__dict__)
-    # exit()
-
-    # for data in enumerate(valid_dl):
-    #     # get the inputs
-    #     inputs, labels = data
-    #     inputs = np.array(inputs)
-    #     print(inputs.shape)
-    #     print(labels[0].size())
-    #     # Run your training process
-    #     #print(f'| Inputs {inputs} | Labels {labels}')
-    #     exit()
-    # exit()
-
-    #breakpoint()
-    #CHANGED regression output should be 1 layer output
-    # IS THIS THE CORRECT IMPLEMENTATION OF MIL FOR REGRESSION?
 
     #added extra [0] because of the new tuple structure
     model = MILModel(batch[0][0].shape[-1], 1) #batch[-1].shape[-1]
@@ -195,50 +166,21 @@ def train(
     #     (3): Linear(in_features=256, out_features=1, bias=True)
     # )
     # )
-
-    # exit()
-
-    # # weigh inversely to class occurances
-    # counts = pd.value_counts(targs[~valid_idxs])
-    # weight = counts.sum() / counts
-    # weight /= weight.sum()
-    # # reorder according to vocab
-    # weight = torch.tensor(
-    #     list(map(weight.get, target_enc.categories_[0])), dtype=torch.float32)
-
-
-
-
-    # preds, labels: [Ns,], "Ns" is the number of total samples
-    # assign each label to its corresponding bin (start from 0)
-    # with your defined get_bin_idx(), return bin_index_per_label: [Ns,]
-    # 
-
     
-
-    # calculate loss
-    #loss_func = WeightedMSELoss(weights=weights)
-    #imbalance_train_weights = fold_weights[~valid_idxs.values]
-    #TODO: imbalance train_weights are now 279, the same as the training ones
-    #however, they need to be as big as the batch size, with the same indeces
+    #for imbalanced regression
     loss_func = WeightedMSELoss()
+    #loss_func = nn.MSELoss()
 
-    #loss_func = nn.MSELoss() #where would the weights come from, foldweights are 373, batch is 64 and randomised
-    #loss_func = nn.MSELoss() #had MSELoss() first but caused error: 
-    #RuntimeError: Found dtype Double but expected Float = issue with nn.MSELoss()
 
     dls = DataLoaders(train_dl, valid_dl)
 
-    # print(valid_dl.__dict__)
-    # exit()
-    #print(thing for thing in model.parameters())
+    
     #SGD instead of Adam standard, from Graziani et al.
-
     #def opt_func(params, **kwargs): return OptimWrapper(SGD(params, lr=.0001, mom=.9, wd=0.01))
 
     learn = Learner(dls, model, loss_func=loss_func, lr=.0001, wd=0.01,
-                    metrics=[mean_squared_error], path=path) #scipy.stats.pearsonr pearson corr coeff instead of r2?
-    #suggestion from Yoni
+                    metrics=[mean_squared_error], path=path)
+
 
     cbs = [
         SaveModelCallback(fname=f'best_valid'),
@@ -256,22 +198,16 @@ def train(
 def deploy(
     test_df: pd.DataFrame, learn: Learner, *,
     target_label: Optional[str] = None,
-    # weights=np.ndarray,
     cat_labels: Optional[Sequence[str]] = None, cont_labels: Optional[Sequence[str]] = None,
 ) -> pd.DataFrame:
     assert test_df.PATIENT.nunique() == len(test_df), 'duplicate patients!'
 
-    #breakpoint()
-    #assert (len(add_label)
-    #        == (n := len(learn.dls.train.dataset._datasets[-2]._datasets))), \
-    #    f'not enough additional feature labels: expected {n}, got {len(add_label)}'
+
     if target_label is None: target_label = learn.target_label
     if cat_labels is None: cat_labels = learn.cat_labels
     if cont_labels is None: cont_labels = learn.cont_labels
 
     #CHANGED
-    #target_enc = learn.dls.dataset._datasets[-1].encode
-    #categories = target_enc.categories_[0]
     add_features = []
     if cat_labels:
         cat_enc = learn.dls.dataset._datasets[-2]._datasets[0].encode
@@ -291,26 +227,19 @@ def deploy(
     test_dl = DataLoader(
         test_ds, batch_size=1, shuffle=False, num_workers=0) #shuffle=True #drop_last=True
 
-    #FIXME all patient targets = 1 
+
     patient_preds, patient_targs = learn.get_preds(dl=test_dl)
-    #print(f'Patient targets:\n{patient_targs}')
     patient_targs = patient_targs[0]
 
     # make into DF w/ ground truth
     #CHANGED
     patient_preds_df = pd.DataFrame.from_dict({
         'PATIENT': test_df.PATIENT.values,
-        target_label: test_df[target_label].values}) #,
-        # **{f'{target_label}_{cat}': patient_preds[:, i]
-        #     for i, cat in enumerate(categories)}})
+        target_label: test_df[target_label].values})
 
-    #TODO: change to weighted mse?
     patient_preds_df['loss'] = F.mse_loss(
         patient_preds.clone().detach(), patient_targs.clone().detach(),
         reduction='none')
-
-    #UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
-    #torch.tensor(patient_preds), torch.tensor(patient_targs),
 
     patient_preds_df['pred'] = patient_preds
 

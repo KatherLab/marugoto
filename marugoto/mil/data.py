@@ -60,12 +60,11 @@ def _to_fixed_size_bag(bag: torch.Tensor, bag_size: int = 512) -> Tuple[torch.Te
     return zero_padded, min(bag_size, len(bag))
 
 
-#CHANGED: ADDED WEIGHT PARAMETER TO IT, IS THIS THE WAY? #TODO
+#CHANGED:
 def make_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[Sequence[Any], Sequence[Any]], #Tuple[FunctionTransformer, ] #Added tuple here for weights
-    #weights: Sequence[Any], #changed
+    targets: Tuple[Sequence[Any], Sequence[Any]],
     add_features: Optional[Iterable[Tuple[Any, Sequence[Any]]]] = None,
     bag_size: Optional[int] = None,
 ) -> MapDataset:
@@ -74,7 +73,7 @@ def make_dataset(
             bags=bags, targets=targets, add_features=add_features, bag_size=bag_size)
     else:
         return _make_basic_dataset(
-            bags=bags, targs=targets, bag_size=bag_size) #changed #target_enc=targets[0], targs=targets[1] , weights=weights
+            bags=bags, targs=targets, bag_size=bag_size)
 
 def get_target_enc(mil_learn):
     return mil_learn.dls.train.dataset._datasets[-1].encode
@@ -83,9 +82,7 @@ def get_target_enc(mil_learn):
 def _make_basic_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    #target_enc: FunctionTransformer,
     targs: Tuple[Sequence[Any], Sequence[Any]],
-    #weights: Sequence[Any], #changed
     bag_size: Optional[int] = None,
 ) -> MapDataset:
     assert len(bags) == len(targs[0]), \
@@ -94,25 +91,21 @@ def _make_basic_dataset(
     ds = MapDataset(
         zip_bag_targ,
         BagDataset(bags, bag_size=bag_size),
-        targs #EncodedDataset(target_enc, targs), #changed
+        targs
     )
 
-    # print(dir(ds))
-    # print(ds.__dict__)
-    # exit()
 
     return ds
 
 #CHANGED
-def zip_bag_targ(bag, targets): #changed, weights
+def zip_bag_targ(bag, targets):
 
     features, lengths = bag
 
     return (
         features,
         lengths,
-        targets #,#.squeeze(), #Here the targets are squeezed, is this desired?
-        #weights #changed
+        targets
     )
 
 
@@ -179,10 +172,9 @@ def get_cohort_df(
     
     #df = clini_df #when running regression with AucRoc and skipping above 3 lines
 
-    #breakpoint()
-    # remove uninteresting
+    
     #CHANGED
-    #df = df[df[target_label].isin(categories)]
+
     # remove slides we don't have
     h5s = set(feature_dir.glob('*.h5'))
     assert h5s, f'no features found in {feature_dir}!'
