@@ -6,7 +6,7 @@ import torch
 from torch.utils.data import Dataset
 import pandas as pd
 
-from marugoto.data import EncodedDataset, MapDataset, SKLearnEncoder
+from marugoto.data import EncodedDataset, MapDataset, FunctionTransformer
 
 
 __all__ = ['BagDataset', 'make_dataset', 'get_cohort_df']
@@ -60,10 +60,12 @@ def _to_fixed_size_bag(bag: torch.Tensor, bag_size: int = 512) -> Tuple[torch.Te
     return zero_padded, min(bag_size, len(bag))
 
 
+#CHANGED: ADDED WEIGHT PARAMETER TO IT, IS THIS THE WAY? #TODO
 def make_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[SKLearnEncoder, Sequence[Any]],
+    targets: Tuple[Sequence[Any], Sequence[Any]], #Tuple[FunctionTransformer, ] #Added tuple here for weights
+    #weights: Sequence[Any], #changed
     add_features: Optional[Iterable[Tuple[Any, Sequence[Any]]]] = None,
     bag_size: Optional[int] = None,
 ) -> MapDataset:
@@ -72,44 +74,54 @@ def make_dataset(
             bags=bags, targets=targets, add_features=add_features, bag_size=bag_size)
     else:
         return _make_basic_dataset(
-            bags=bags, target_enc=targets[0], targs=targets[1], bag_size=bag_size)
+            bags=bags, targs=targets, bag_size=bag_size) #changed #target_enc=targets[0], targs=targets[1] , weights=weights
 
 def get_target_enc(mil_learn):
     return mil_learn.dls.train.dataset._datasets[-1].encode
 
-
+#CHANGED
 def _make_basic_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    target_enc: SKLearnEncoder,
-    targs: Sequence[Any],
+    #target_enc: FunctionTransformer,
+    targs: Tuple[Sequence[Any], Sequence[Any]],
+    #weights: Sequence[Any], #changed
     bag_size: Optional[int] = None,
 ) -> MapDataset:
-    assert len(bags) == len(targs), \
+    assert len(bags) == len(targs[0]), \
         'number of bags and ground truths does not match!'
 
     ds = MapDataset(
         zip_bag_targ,
         BagDataset(bags, bag_size=bag_size),
-        EncodedDataset(target_enc, targs),
+        targs #EncodedDataset(target_enc, targs), #changed
     )
+
+    # print(dir(ds))
+    # print(ds.__dict__)
+    # exit()
 
     return ds
 
+#CHANGED
+def zip_bag_targ(bag, targets): #changed, weights
 
-def zip_bag_targ(bag, targets):
     features, lengths = bag
+
     return (
         features,
         lengths,
-        targets.squeeze(),
+        targets #,#.squeeze(), #Here the targets are squeezed, is this desired?
+        #weights #changed
     )
 
 
+
+################################################### UNUSED
 def _make_multi_input_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[SKLearnEncoder, Sequence[Any]],
+    targets: Tuple[FunctionTransformer, Sequence[Any]],
     add_features: Iterable[Tuple[Any, Sequence[Any]]],
     bag_size: Optional[int] = None
 ) -> MapDataset:
@@ -152,18 +164,25 @@ def _attach_add_to_bag_and_zip_with_targ(bag, add, targ):
         bag[1], # the bag's length
         targ.squeeze(),   # the ground truth
     )
+################################################### UNUSED
+
 
 
 def get_cohort_df(
     clini_table: Union[Path, str], slide_csv: Union[Path, str], feature_dir: Union[Path, str],
-    target_label: str, categories: Iterable[str]
+    target_label: str #, categories: Iterable[str]
 ) -> pd.DataFrame:
     clini_df = pd.read_csv(clini_table, dtype=str) if Path(clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
+    clini_df = clini_df.astype({target_label: 'float32'})
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
+    
+    #df = clini_df #when running regression with AucRoc and skipping above 3 lines
 
+    #breakpoint()
     # remove uninteresting
-    df = df[df[target_label].isin(categories)]
+    #CHANGED
+    #df = df[df[target_label].isin(categories)]
     # remove slides we don't have
     h5s = set(feature_dir.glob('*.h5'))
     assert h5s, f'no features found in {feature_dir}!'

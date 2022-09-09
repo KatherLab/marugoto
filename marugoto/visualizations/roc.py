@@ -114,10 +114,14 @@ def plot_roc_curves_(
     import pandas as pd
     from pathlib import Path
     pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
-
     y_trues = [df[target_label] == true_label for df in pred_dfs]
+    # breakpoint()
     y_preds = [pd.to_numeric(df[f'{target_label}_{true_label}']) for df in pred_dfs]
-    title = f'{target_label} = {true_label}'
+
+    #cohort_type = (outpath.split('/')[-1]).split('-')[:1] #/home/omarelnahhas/HRD_project/HRD_Binary/TCGA-LUSC-DX-features
+
+    title = f'{target_label} = {true_label}' #{cohort_type}:
+    #breakpoint()
 
     fig, ax = plt.subplots()
     if len(pred_dfs) == 1:
