@@ -2,6 +2,15 @@
 
 Note: for more information regarding setting up marugoto on your system and file management for your project, see [documentation](https://github.com/KatherLab/marugoto/blob/main/Documentation.md).
 
+## Feature extraction
+Download best_ckpt.pth from latest Xiyue Wang:
+https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
+    
+    python -m marugoto.extract.xiyue_wang \
+        --checkpoint-path ~/Downloads/best_ckpt.pth \
+        --outdir ~/TCGA_features/TCGA-CRC-DX-features/xiyue-wang \
+        /mnt/TCGA_BLOCKS/TCGA-CRC-DX-BLOCKS/*
+        
 ## Tile-Wise Training and Deployment ##
 
 ### Train a Neural Network on Pre-Extracted Features ###
