@@ -1,4 +1,4 @@
-# oまるごと—A Toolbox for Building Deep Learning Regression Workflows ##
+# Regression まるごと—A Toolbox for Building Deep Learning Regression Workflows ##
 
 This repo has been adapted from the main Marugoto pipeline which only allowed classification problems.
 Please contact omarelnahhas1337@gmail.com to get it running in your environment, as packages such as sklearn have been changed in order to make it work, which have not been pushed to this repo.
