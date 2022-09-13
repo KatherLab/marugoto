@@ -257,7 +257,8 @@ def categorical_crossval_(
     if (fold_path := output_path/'folds.pt').exists():
         folds = torch.load(fold_path)
     else:
-        skf = StratifiedKFold(n_splits=n_splits)
+        #added shuffling with seed 1337
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
         patient_df = df.groupby('PATIENT').first().reset_index()
         folds = tuple(skf.split(patient_df.PATIENT, patient_df[target_label]))
         torch.save(folds, fold_path)
