@@ -4,6 +4,8 @@ import itertools
 from typing import Any, Callable, Sequence, Protocol
 import warnings
 
+from sklearn.preprocessing import FunctionTransformer
+
 from torch.utils.data import Dataset
 import numpy as np
 import torch
@@ -114,8 +116,10 @@ class MapDataset(Dataset):
                 false, then all datasets will be truncated to the shortest
                 dataset's length.
         """
+        #breakpoint()
+        #ds[0] contains bags, ds[1] contains (targets,weights)
         if strict:
-            assert all(len(ds) == len(datasets[0]) for ds in datasets)
+            #assert all(len(ds) == len(datasets[[0]]) for ds in datasets)
             self._len = len(datasets[0])
         elif datasets:
             self._len = min(len(ds) for ds in datasets)
@@ -129,22 +133,25 @@ class MapDataset(Dataset):
         return self._len
 
     def __getitem__(self, index: int) -> Any:
-        return self.func(*[ds[index] for ds in self._datasets])
+        #breakpoint()
+
+        items = [(ds[index] if len(ds)!=2 else (ds[0][index], ds[1][index])) for ds in self._datasets]
+        return items #self.func(*[ds[index] for ds in self._datasets])
 
     def new_empty(self):
         #FIXME hack to appease fastai's export
         return self
 
 
-class SKLearnEncoder(Protocol):
-    """An sklearn-style encoder."""
-    categories_: Sequence[Sequence[str]]
-    def transform(x: Sequence[Sequence[Any]]):
-        ...
+# class SKLearnEncoder(Protocol):
+#     """An sklearn-style encoder."""
+#     categories_: Sequence[Sequence[str]]
+#     def transform(x: Sequence[Sequence[Any]]):
+#         ...
 
 
 class EncodedDataset(MapDataset):
-    def __init__(self, encode: SKLearnEncoder, values: Sequence[Any]):
+    def __init__(self, encode: FunctionTransformer, values: Sequence[Any]):
         """A dataset which first encodes its input data.
 
         This class is can be useful with classes such as fastai, where the
