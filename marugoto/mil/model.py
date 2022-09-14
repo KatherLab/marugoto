@@ -44,7 +44,8 @@ class MILModel(nn.Module):
 
         scores = self.head(weighted_embedding_sums)
 
-        return torch.softmax(scores, dim=1)
+        #replaced Softmax by Sigmoid function, output 'probabilities' 0 to 1
+        return torch.sigmoid(scores)
 
     def _masked_attention_scores(self, embeddings, lens):
         """Calculates attention scores for all bags.
