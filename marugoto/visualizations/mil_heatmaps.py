@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import h5py
 
-__all__ = ['plot_heatmaps', 'MapType']
+__all__ = ['plot_heatmaps_', 'MapType']
 # list of allowed formats for whole slide images
 wsi_suffixes = ['.svs', '.ndpi', '.tif']
 # define colours for heatmap plots here
@@ -48,22 +48,10 @@ def get_dict_maptype_to_coords_scores(h5_feature_path: Path, model: nn.Module,
     # calculate attention, scores etc.
     encs = encoder(feats)
     patient_atts = torch.softmax(attention(encs), dim=0).detach()
-    #patient_atts_plot = np.zeros(patient_atts.shape)
-    #for i in np.arange(patient_atts.shape[0]):
-    #    patient_atts_plot[i,0] = percentileofscore(patient_atts[:,0],patient_atts[i,0].numpy())
-
-    #patient_atts *= len(patient_atts)
-    #encs = patient_atts*encs
     patient_scores = torch.softmax(head(encs), dim=1).detach()
-    #n_classes = patient_scores.shape[-1]*1.
-    # scores scaled by attention, centered around 0
-    # Above is a very bad idea for heat maps!
-    patient_scores=(patient_atts-patient_atts.min())/(patient_atts.max()-patient_atts.min())*patient_scores
-    if patient_atts.ndim < patient_scores.ndim:
-        patient_atts = patient_atts.unsqueeze(-1)
-    # tweak here: Normalise such that max attentionscore=1
-    patient_atts = patient_atts/torch.max(patient_atts)
-    patient_weighted_scores = patient_scores#patient_atts * patient_scores
+    normed_patient_atts=(patient_atts-patient_atts.min())/(patient_atts.max()-patient_atts.min())
+    patient_weighted_scores=normed_patient_atts*patient_scores
+
     assert patient_scores.shape[-1] <= colors.shape[0], f'not enough colours.\n'\
         'Can only plot score for max {colors.shape[0]}'\
         'classes at a time!\n Number of classes asked for:'\
@@ -217,7 +205,8 @@ def _get_stride(coordinates: np.ndarray) -> int:
     return stride
 
 
-def _visualize_activation_map(activations: np.ndarray, colors: np.ndarray, alpha: float = 1.) -> np.ndarray:
+def _visualize_activation_map(activations: np.ndarray, colors: np.ndarray, alpha: float = 1.,
+    clipping: bool=True) -> np.ndarray:
     """Transforms an activation map into an RGBA numpy array.
     Args:
         activations: An (h, w, D) array of activations.
@@ -233,6 +222,14 @@ def _visualize_activation_map(activations: np.ndarray, colors: np.ndarray, alpha
         Max value provided {activations[2].max()}."
     # transform activation map into RGB map
     rgbmap = activations.dot(colors)
+    # TODO this is a cheap fix only!
+    if clipping:
+        max_cvalue=np.amax(rgbmap)
+        if max_cvalue>255.0:
+            #Rescale
+            rgbmap=rgbmap/max_cvalue*255.0
+            print(f"Rescaled rgbmap as max pixel value is {max_cvalue}")
+            print(f"This could potentially be a problem!")
 
     # create RGBA map with non-zero activations being the foreground
     mask = activations.any(axis=2)
@@ -275,7 +272,7 @@ def _get_slide_features(h5_feature_dir, ws_path):
     return list(zip(whole_slides, h5_feature_paths))
 
 
-def plot_heatmaps(out_dir: Path, train_dir: Path, ws_path: Path, h5_feature_dir: Path,
+def plot_heatmaps_(out_dir: Path, train_dir: Path, ws_path: Path, h5_feature_dir: Path,
                   map_types: list[MapType] = [MapType.ATTENTION],
                   superimpose: bool = True, alpha: float = 0.5):
     """Generates heatmaps for whole slide images.
@@ -319,18 +316,24 @@ def plot_heatmaps(out_dir: Path, train_dir: Path, ws_path: Path, h5_feature_dir:
 
 
 def get_overlay(thumb,covered_area_size, coords, scores, alpha=0.6, colors=colors):
+    """ takes a thumb image, resizes it to covered_area_size, gets heatmap for scores
+        and overlays score heatmap over thumb image.
+    """
 # get attention map in overlay
-        heatmap = _MIL_heatmap_for_slide(coords=coords, scores= scores,
-                                colours=colors)
-        heatmap[:, :, -1] = heatmap[:, :, -1]*alpha
-        heatmap = Image.fromarray(heatmap)
-        # make heatmap and thumb the same size
-        scaled_heatmap = Image.new('RGBA', thumb.size)
-        scaled_heatmap.paste(heatmap.resize(
-            covered_area_size, resample=Image.Resampling.NEAREST))
-        return Image.alpha_composite(thumb, scaled_heatmap)
+    heatmap = _MIL_heatmap_for_slide(coords=coords, scores= scores,
+                            colours=colors)
+    heatmap[:, :, -1] = heatmap[:, :, -1]*alpha
+    heatmap = Image.fromarray(heatmap)
+    # make heatmap and thumb the same size
+    scaled_heatmap = Image.new('RGBA', thumb.size)
+    scaled_heatmap.paste(heatmap.resize(
+        covered_area_size, resample=Image.Resampling.NEAREST))
+    return Image.alpha_composite(thumb, scaled_heatmap)
 
-def plot_heatmaps_two_cats(out_dir: Path, train_dir1: Path, train_dir2: Path, ws_path: Path, h5_feature_dir: Path,
+# below are just two examples of how one can use above functions to plot
+# your own heatmaps
+
+def plot_heatmaps_two_cats_(out_dir: Path, train_dir1: Path, train_dir2: Path, ws_path: Path, h5_feature_dir: Path,
                               superimpose: bool = True, alpha: float = 0.6):
     
     format = '.svg'
@@ -397,13 +400,13 @@ def plot_heatmaps_two_cats(out_dir: Path, train_dir1: Path, train_dir2: Path, ws
         axs[0, 2].imshow(att_overlay2)
         axs[0, 2].axis('off')
         axs[1,0].imshow(prob_overlay1)
-        legend_elements = [Patch(facecolor=colors[0], label='prob_MSIH')]
-        axs[1, 0].legend(title='contribution', handles=legend_elements,
+        legend_elements = [Patch(facecolor=colors[0], label=f'prob_{categories1[0]}')]
+        axs[1, 0].legend(title='scores', handles=legend_elements,
                          bbox_to_anchor=(1, 1), loc='upper left')
         axs[1, 0].axis('off')
         axs[1,1].imshow(prob_overlay2)
-        legend_elements = [Patch(facecolor=colors[1], label='prob_braf')]
-        axs[1, 1].legend(title='contribution', handles=legend_elements,
+        legend_elements = [Patch(facecolor=colors[1], label=f'prob_{categories2[0]}')]
+        axs[1, 1].legend(title='scores', handles=legend_elements,
                          bbox_to_anchor=(1, 1), loc='upper left')
         axs[1, 1].axis('off')
 
@@ -423,7 +426,7 @@ def plot_heatmaps_two_cats(out_dir: Path, train_dir1: Path, train_dir2: Path, ws
 
     return
 
-def plot_heatmaps_CRC_RAINBOW(out_dir: Path, train_dir: Path, ws_path: Path, h5_feature_dir: Path,
+def plot_heatmaps_CRC_RAINBOW_(out_dir: Path, train_dir: Path, ws_path: Path, h5_feature_dir: Path,
                                alpha: float = 0.6):
 
     format = '.svg'
@@ -522,40 +525,3 @@ def plot_heatmaps_CRC_RAINBOW(out_dir: Path, train_dir: Path, ws_path: Path, h5_
         out_file.parent.mkdir(exist_ok=True, parents=True)
         plt.savefig(out_file, bbox_inches='tight')
         plt.close('all')
-
-
-
-
-# %%
-# train_dir = Path(
-#    '/home/janniehues/Documents/CRC_Rainbow/MIL_marugoto/Xiyue-Wang/test/fold-0/')
-#project_dir = Path.cwd()
-# h5_feature_dir = Path(
-#    '/home/janniehues/Documents/CRC_Rainbow/features/Xiyue-Wang/')
-#ws_path = Path('/home/janniehues/Downloads/ws_Rainbow/')
-# '/home/janniehues/Downloads/Rainbow01_1008272_Wholeslide_Default_Extended.tif')
-# plot_heatmaps(outdir=project_dir, train_dir=train_dir, ws_path=ws_path, h5_feature_dir=h5_feature_dir,
-#              categories=['MSIH', 'nonMSIH'], map_types=[MapType.ATTENTION, MapType.PROBABILITY, MapType.CONTRIBUTION])
-
-# %%
-# learner = load_learner(
-#    '/home/janniehues/Documents/CRC_Rainbow/MIL_marugoto/Xiyue-Wang/test/fold-0/export.pkl')
-# print(learner.target_label)
-#target_enc = get_target_enc(learner)
-#categories = target_enc.categories_[0]
-# print(categories)
-# target_enc.transform([[categories[0]]])[0,:]
-
-# %%
-# model = load_learner(
-#    '/home/janniehues/Documents/CRC_Rainbow/MIL_marugoto/Xiyue-Wang/test/fold-0/export.pkl').model
-# h5_feature_path = Path(
-#    '/home/janniehues/Documents/CRC_Rainbow/features/Xiyue-Wang/Rainbow01_1008272_Wholeslide_Default_Extended.h5')
-# heatmap_dat = _MIL_heatmap_for_slide(
-#    h5_feature_path, model, pos_idxs=[0], map_type='attention')
-#
-# _plot_heatmap(heatmap_dat, wsi_path=Path(
-#    '/home/janniehues/Downloads/Rainbow01_1008272_Wholeslide_Default_Extended.tif'), superimpose=True)
-
-
-# %%
