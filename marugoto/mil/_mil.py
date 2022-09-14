@@ -126,7 +126,8 @@ def deploy(
     test_dl = DataLoader(
         test_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count())
 
-    patient_preds, patient_targs = learn.get_preds(dl=test_dl)
+    #removed softmax in forward, but add here to get 0-1 probabilities
+    patient_preds, patient_targs = learn.get_preds(dl=test_dl, act=nn.Softmax(dim=1))
 
     # make into DF w/ ground truth
     patient_preds_df = pd.DataFrame.from_dict({
