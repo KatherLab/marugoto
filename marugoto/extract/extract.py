@@ -100,6 +100,8 @@ def extract_features_(
         dl = torch.utils.data.DataLoader(
             ds, batch_size=64, shuffle=False, num_workers=os.cpu_count(), drop_last=False)
 
+        model = model.eval()
+
         feats = []
         for batch in tqdm(dl, leave=False):
             feats.append(
