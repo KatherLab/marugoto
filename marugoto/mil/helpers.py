@@ -220,19 +220,11 @@ def categorical_crossval_(
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
-    
-
     # filter na, infer categories if not given
     df = df.dropna(subset=target_label)
 
-
-
     #CHANGED
     df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label) #categories
-    scaler=MinMaxScaler()
-    df[target_label] = scaler.fit_transform(df[[target_label]])
-
-
 
     if (fold_path := output_path/'folds.pt').exists():
         folds = torch.load(fold_path)
@@ -253,9 +245,6 @@ def categorical_crossval_(
     with open(output_path/'info.json', 'w') as f:
         json.dump(info, f)
 
-
-
-    ##### CHECK OUT THIS CHUNK! What goes into _crossval_train is being trained on
     for fold, (train_idxs, test_idxs) in enumerate(folds):
         fold_path = output_path/f'fold-{fold}'
         if (preds_csv := fold_path/'patient-preds.csv').exists():
@@ -264,16 +253,27 @@ def categorical_crossval_(
         elif (fold_path/'export.pkl').exists():
             learn = load_learner(fold_path/'export.pkl')
         else:
-            fold_train_df = df.iloc[train_idxs]
+            #TODO: Save fold distribution to rescale output back
+            
+            
+            #separate minmax normalisation for train set
+            fold_train_df = pd.DataFrame(df.iloc[train_idxs])
+            scaler=MinMaxScaler()
+            fold_train_df[target_label] = scaler.fit_transform(fold_train_df[target_label].values.reshape(-1,1))
 
             learn = _crossval_train(
                 fold_path=fold_path, fold_df=fold_train_df, fold=fold, info=info,
                 target_label=target_label, #, target_enc=target_enc,
                 cat_labels=cat_labels, cont_labels=cont_labels) #added weights #fold_weights_train=fold_weights_train
             learn.export()
- 
-        fold_test_df = df.iloc[test_idxs]
+        
+        #TODO: Save fold distribution to rescale output back --> is there a better way?
+        #separate minmax normalisation for test set
+        fold_test_df = pd.DataFrame(df.iloc[test_idxs])
         fold_test_df.drop(columns='slide_path').to_csv(fold_path/'test.csv', index=False)
+        scaler=MinMaxScaler()
+        fold_test_df[target_label] = scaler.fit_transform(fold_test_df[target_label].values.reshape(-1,1))
+        
         patient_preds_df = deploy(
             test_df=fold_test_df, learn=learn, #send weights to be all ones, i.e. nothing changes weights=np.ones(test_idxs.shape)
             target_label=target_label, cat_labels=cat_labels, cont_labels=cont_labels)

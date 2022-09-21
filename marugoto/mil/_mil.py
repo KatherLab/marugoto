@@ -11,9 +11,9 @@ from torch.utils.data import Dataset
 from fastai.vision.all import (
     Learner, DataLoader, DataLoaders, RocAuc,
     SaveModelCallback, CSVLogger, GradientAccumulation)
-from fastai.callback import tensorboard
+#from fastai.callback import tensorboard
 
-from fastai.callback.tensorboard import TensorBoardCallback
+#from fastai.callback.tensorboard import TensorBoardCallback
 import pandas as pd
 import numpy as np
 
