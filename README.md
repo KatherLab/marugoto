@@ -2,10 +2,6 @@
 
 Note: for more information regarding setting up marugoto on your system and file management for your project, see [documentation](https://github.com/KatherLab/marugoto/blob/main/Documentation.md).
 
-## Advice
-
-- default batch size is 64, consider to adapt
-
 ## Feature extraction
 Download best_ckpt.pth from latest Xiyue Wang:
 https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
@@ -100,3 +96,8 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --outpath output/path \
         --target-label isMSIH \
         --true-label MSIH
+        
+
+## Advice
+
+- default batch size is 64 patients, consider to adapt for smaller cohorts
