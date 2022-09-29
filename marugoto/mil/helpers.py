@@ -65,7 +65,8 @@ def train_categorical_model_(
         'output_path': str(output_path.absolute()),
         'datetime': datetime.now().astimezone().isoformat()}
 
-    model_path = output_path/'export.pkl'
+    # saving and loading doesn't really work yet. I wanted to wait for pytorch-lightning
+    model_path = output_path/'export.pt'  # only saves model weights instead of fastai's Learner class
     if model_path.exists():
         print(f'{model_path} already exists. Skipping...')
         return
@@ -278,15 +279,15 @@ def categorical_crossval_(
         if (preds_csv := fold_path/'patient-preds.csv').exists():
             print(f'{preds_csv} already exists!  Skipping...')
             continue
-        elif (fold_path/'export.pkl').exists():
-            learn = load_learner(fold_path/'export.pkl')
+        elif (fold_path/'export.pt').exists():
+            learn.load('export')
         else:
             fold_train_df = df.iloc[train_idxs]
             learn = _crossval_train(
                 fold_path=fold_path, fold_df=fold_train_df, fold=fold, info=info,
                 target_label=target_label, target_enc=target_enc,
                 cat_labels=cat_labels, cont_labels=cont_labels)
-            learn.export()
+            learn.save('export')
 
         fold_test_df = df.iloc[test_idxs]
         fold_test_df.drop(columns='slide_path').to_csv(fold_path/'test.csv', index=False)

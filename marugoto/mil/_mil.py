@@ -3,11 +3,9 @@ from typing import Any, Iterable, Optional, Sequence, Tuple, TypeVar
 from pathlib import Path
 import os
 
-import h5py
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset
 from fastai.vision.all import (
     Learner, DataLoader, DataLoaders, RocAuc,
     SaveModelCallback, CSVLogger)
@@ -17,7 +15,7 @@ import numpy as np
 from marugoto.data import SKLearnEncoder
 
 from .data import make_dataset
-from .model import MILModel
+from .transformer import Transformer
 
 
 __all__ = ['train', 'deploy']
@@ -68,7 +66,9 @@ def train(
         valid_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count())
     batch = train_dl.one_batch()
 
-    model = MILModel(batch[0].shape[-1], batch[-1].shape[-1])
+    # for binary classification num_classes=2 for same output dim as normal MILModel
+    model = Transformer(num_classes=2)
+    model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
     # weigh inversely to class occurances
     counts = pd.value_counts(targs[~valid_idxs])
@@ -79,7 +79,7 @@ def train(
         list(map(weight.get, target_enc.categories_[0])), dtype=torch.float32)
     loss_func = nn.CrossEntropyLoss(weight=weight)
 
-    dls = DataLoaders(train_dl, valid_dl)
+    dls = DataLoaders(train_dl, valid_dl, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
     learn = Learner(dls, model, loss_func=loss_func,
                     metrics=[RocAuc()], path=path)
 
