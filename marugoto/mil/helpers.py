@@ -261,6 +261,8 @@ def categorical_crossval_(
     
     elif (fixed_folds is not None):
         folds = torch.load(fixed_folds)
+        torch.save(folds, output_path/'folds.pt')
+        print(f"Successfully loaded and saved fixed folds from {fixed_folds}")
 
     else:
         #added shuffling with seed 1337
@@ -313,7 +315,7 @@ def _crossval_train(
         k: int(v) for k, v in fold_df[target_label].value_counts().items()}}
 
     train_patients, valid_patients = train_test_split(
-        fold_df.PATIENT, stratify=fold_df[target_label])
+        fold_df.PATIENT, stratify=fold_df[target_label], random_state=1337)
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
     train_df.drop(columns='slide_path').to_csv(fold_path/'train.csv', index=False)
