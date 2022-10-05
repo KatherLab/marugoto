@@ -203,6 +203,7 @@ def categorical_crossval_(
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
     n_splits: int = 5,
+    fixed_folds: Optional[PathLike] = None, #added option to use fixed folds from previous experiment
     categories: Optional[Iterable[str]] = None,
 ) -> None:
     """Performs a cross-validation for a categorical target.
@@ -214,6 +215,7 @@ def categorical_crossval_(
         target_label:  Label to train for.
         output_path:  File to save model and the results in.
         n_splits:  The number of folds.
+        fixed_folds: Path to the folds.pt splits you want to use
         categories:  Categories to train for, or all categories appearing in the
             clini table if none given (e.g. '["MSIH", "nonMSIH"]').
     """
@@ -256,6 +258,10 @@ def categorical_crossval_(
 
     if (fold_path := output_path/'folds.pt').exists():
         folds = torch.load(fold_path)
+    
+    elif (fixed_folds is not None):
+        folds = torch.load(fixed_folds)
+
     else:
         #added shuffling with seed 1337
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)

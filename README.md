@@ -40,7 +40,8 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \
         --output-path output/path \
-        --n-splits 5
+        --n-splits 5 \
+        (optional) --fixed_folds /abs/path/to/folds.pt
 
 ## Attention-Based Multiple Instance Learning ##
 
