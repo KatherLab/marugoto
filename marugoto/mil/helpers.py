@@ -13,6 +13,8 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler, FunctionTransfo
 from fastai.vision.learner import load_learner
 import torch
 from sklearn.preprocessing import MinMaxScaler
+import seaborn as sns
+import scipy
 #from marugoto.data import FunctionTransformer
 
 from ._mil import train, deploy
@@ -247,36 +249,46 @@ def categorical_crossval_(
 
     for fold, (train_idxs, test_idxs) in enumerate(folds):
         fold_path = output_path/f'fold-{fold}'
+        
+        #minmax normalisation for train set, save distrib for test
+        fold_train_df = pd.DataFrame(df.iloc[train_idxs])
+        scaler=MinMaxScaler().fit(fold_train_df[target_label].values.reshape(-1,1))
+        fold_train_df[target_label] = scaler.transform(fold_train_df[target_label].values.reshape(-1,1))
+
         if (preds_csv := fold_path/'patient-preds.csv').exists():
             print(f'{preds_csv} already exists!  Skipping...')
             continue
         elif (fold_path/'export.pkl').exists():
             learn = load_learner(fold_path/'export.pkl')
-        else:
-            #TODO: Save fold distribution to rescale output back
-            
-            
-            #separate minmax normalisation for train set
-            fold_train_df = pd.DataFrame(df.iloc[train_idxs])
-            scaler=MinMaxScaler()
-            fold_train_df[target_label] = scaler.fit_transform(fold_train_df[target_label].values.reshape(-1,1))
-
+        else:         
             learn = _crossval_train(
                 fold_path=fold_path, fold_df=fold_train_df, fold=fold, info=info,
                 target_label=target_label, #, target_enc=target_enc,
                 cat_labels=cat_labels, cont_labels=cont_labels) #added weights #fold_weights_train=fold_weights_train
             learn.export()
-        
-        #TODO: Save fold distribution to rescale output back --> is there a better way?
-        #separate minmax normalisation for test set
+
+        #minmax normalisation for test set with train distrib (same scaler object)
         fold_test_df = pd.DataFrame(df.iloc[test_idxs])
         fold_test_df.drop(columns='slide_path').to_csv(fold_path/'test.csv', index=False)
-        scaler=MinMaxScaler()
-        fold_test_df[target_label] = scaler.fit_transform(fold_test_df[target_label].values.reshape(-1,1))
+        fold_test_df[target_label] = scaler.transform(fold_test_df[target_label].values.reshape(-1,1))
         
         patient_preds_df = deploy(
             test_df=fold_test_df, learn=learn, #send weights to be all ones, i.e. nothing changes weights=np.ones(test_idxs.shape)
             target_label=target_label, cat_labels=cat_labels, cont_labels=cont_labels)
+
+        #rescale ground truth and patient predictions to original range
+        patient_preds_df[target_label] = scaler.inverse_transform(patient_preds_df[target_label])
+        patient_preds_df['pred'] = scaler.inverse_transform(patient_preds_df['pred'])
+
+        #obtain pearson's R and create plot per fold
+        plot_pearsr_df = patient_preds_df[[target_label, "pred"]]
+        pears = scipy.stats.pearsonr(plot_pearsr_df[target_label], plot_pearsr_df['pred'])[0]
+        pval = scipy.stats.pearsonr(plot_pearsr_df[target_label], plot_pearsr_df['pred'])[1]
+        ax = sns.lmplot(x=target_label, y='pred', data=plot_pearsr_df)
+        ax.set(title=f"Pearson's R: {np.round(pears,2)} \n(p-value: {np.round(pval, 7)})")
+        #ax.set(ylim=(0,1), xlim=(0,1)) #set a x/y-limit to get the same plots for a specific project
+        ax.savefig(fold_path/"pearsonsr_correlation.png")
+
         patient_preds_df.to_csv(preds_csv, index=False)
     ######
 
