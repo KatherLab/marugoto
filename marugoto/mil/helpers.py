@@ -277,8 +277,8 @@ def categorical_crossval_(
             target_label=target_label, cat_labels=cat_labels, cont_labels=cont_labels)
 
         #rescale ground truth and patient predictions to original range
-        patient_preds_df[target_label] = scaler.inverse_transform(patient_preds_df[target_label])
-        patient_preds_df['pred'] = scaler.inverse_transform(patient_preds_df['pred'])
+        patient_preds_df[target_label] = scaler.inverse_transform(patient_preds_df[target_label].values.reshape(-1,1))
+        patient_preds_df['pred'] = scaler.inverse_transform(patient_preds_df['pred'].values.reshape(-1,1))
 
         #obtain pearson's R and create plot per fold
         plot_pearsr_df = patient_preds_df[[target_label, "pred"]]
