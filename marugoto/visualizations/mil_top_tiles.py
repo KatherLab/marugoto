@@ -26,9 +26,9 @@ def _top_att_tiles_df(
     if ~isinstance(feature_dir, list):
         feature_dir = [feature_dir]
     df = mil.data.get_cohort_df(
-        clini_excel=patient_preds_csv,
+        clini_table=patient_preds_csv,
         slide_csv=slide_csv,
-        feature_dirs=feature_dir,
+        feature_dir=feature_dir,
         target_label=target_label,
         categories=[pos_class],
     )
@@ -126,3 +126,6 @@ def plot_top_att_tiles_(
     for s in suffix:
         out_img = out_file.with_suffix(s)
         plot_top_att_from_df_(df, out_img)
+if __name__ == '__main__':
+    from fire import Fire
+    Fire(plot_top_att_tiles_)
