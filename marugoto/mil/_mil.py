@@ -19,7 +19,7 @@ import numpy as np
 
 
 #Deep imbalanced regression
-from .loss import WeightedMSELoss, WeightedFocalMSELoss, WeightedFocalL1Loss
+from .loss import WeightedMSELoss, WeightedL1Loss, WeightedHuberLoss
 from fastai.optimizer import OptimWrapper
 from fastai.optimizer import SGD
 
@@ -168,12 +168,9 @@ def train(
     # )
     
     #for imbalanced regression
-    loss_func = WeightedMSELoss()
-    #loss_func = nn.MSELoss()
-
+    loss_func = WeightedL1Loss()
 
     dls = DataLoaders(train_dl, valid_dl)
-
     
     #SGD instead of Adam standard, from Graziani et al.
     #def opt_func(params, **kwargs): return OptimWrapper(SGD(params, lr=.0001, mom=.9, wd=0.01))

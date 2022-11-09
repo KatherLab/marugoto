@@ -18,6 +18,36 @@ class WeightedMSELoss(nn.Module):
         loss = torch.mean(loss)
         return loss
 
+class WeightedL1Loss(nn.Module):
+    def __init__(self, **kwargs): #weights=None,
+        super().__init__()
+        #self.weights = weights
+
+    def forward(self, inputs, targets): #added weights as targets[1]
+        # weights = self.weights
+        #breakpoint()
+        weights = targets[1] + 1
+        loss = F.l1_loss(inputs, targets[0], reduction='none')
+        if weights is not None:
+            loss = loss*weights #remove squeeze()
+        loss = torch.mean(loss)
+        return loss
+
+class WeightedHuberLoss(nn.Module):
+    def __init__(self, **kwargs): #weights=None,
+        super().__init__()
+        #self.weights = weights
+
+    def forward(self, inputs, targets): #added weights as targets[1]
+        # weights = self.weights
+        #breakpoint()
+        weights = targets[1] + 1
+        loss = F.huber_loss(inputs, targets[0], reduction='none', delta=1.0)
+        if weights is not None:
+            loss = loss*weights #remove squeeze()
+        loss = torch.mean(loss)
+        return loss
+
 class WeightedFocalMSELoss(nn.Module):
     def __init__(self, activate='sigmoid', beta=.2, gamma=1, **kwargs):
         super().__init__()
