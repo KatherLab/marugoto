@@ -265,6 +265,16 @@ def categorical_crossval_(
         print(f"Successfully loaded and saved fixed folds from {fixed_folds}")
 
     else:
+        #check the maximum amount of splits that can be made
+        distrib=info['class distribution']['overall']        
+        least_populated_class = min(distrib, key=distrib.get)
+        if distrib[least_populated_class] < n_splits:
+            print(f"Warning: Cannot make requested {n_splits} folds due to having \
+                 {distrib[least_populated_class]} samples in category '{least_populated_class}', \
+                    reduced to {distrib[least_populated_class]} folds.")
+            n_splits = distrib[least_populated_class]
+            info['n_splits'] = distrib[least_populated_class]
+        
         #added shuffling with seed 1337
         skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
         patient_df = df.groupby('PATIENT').first().reset_index()
