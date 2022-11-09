@@ -244,6 +244,11 @@ def categorical_crossval_(
         #add option to create balanced folds based on binary equivalent
         else:
             print(f"Using StratifiedKFold with binarized variable {binary_label}")
+            all_classes = df[binary_label].unique()
+            least_populated_class = min([np.sum(df[binary_label] == x) for x in all_classes])
+            if least_populated_class < n_splits:
+                print(f"Warning: Cannot make requested {n_splits} folds, reduced to {least_populated_class} folds.")
+                n_splits = least_populated_class
             skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
             patient_df = df.groupby('PATIENT').first().reset_index()
             folds = tuple(skf.split(patient_df.PATIENT, patient_df[binary_label])) # patient_df['SITE_CODE'])) with stratified potentially
@@ -296,10 +301,11 @@ def categorical_crossval_(
         plot_pearsr_df = patient_preds_df[[target_label, "pred"]]
         pears = scipy.stats.pearsonr(plot_pearsr_df[target_label], plot_pearsr_df['pred'])[0]
         pval = scipy.stats.pearsonr(plot_pearsr_df[target_label], plot_pearsr_df['pred'])[1]
+        slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plot_pearsr_df[target_label], plot_pearsr_df['pred'])
         ax = sns.lmplot(x=target_label, y='pred', data=plot_pearsr_df)
-        ax.set(title=f"Pearson's R: {np.round(pears,2)} \n(p-value: {np.round(pval, 7)})")
+        ax.set(title=f"R^2: {np.round(r_value**2, 2)} (p-value: {np.round(p_value, 7)}\nPearson's R: {np.round(pears,2)} (p-value: {np.round(pval, 7)})")
         #ax.set(ylim=(0,1), xlim=(0,1)) #set a x/y-limit to get the same plots for a specific project
-        ax.savefig(fold_path/"pearsonsr_correlation.png")
+        ax.savefig(fold_path/"correlation_plot.png")
 
         patient_preds_df.to_csv(preds_csv, index=False)
     ######
