@@ -281,7 +281,7 @@ def categorical_crossval_(
             learn = _crossval_train(
                 fold_path=fold_path, fold_df=fold_train_df, fold=fold, info=info,
                 target_label=target_label, #, target_enc=target_enc,
-                cat_labels=cat_labels, cont_labels=cont_labels) #added weights #fold_weights_train=fold_weights_train
+                cat_labels=cat_labels, cont_labels=cont_labels, binary_label=binary_label) #added weights #fold_weights_train=fold_weights_train
             learn.export()
 
         #minmax normalisation for test set with train distrib (same scaler object)
@@ -303,7 +303,7 @@ def categorical_crossval_(
         pval = scipy.stats.pearsonr(plot_pearsr_df[target_label], plot_pearsr_df['pred'])[1]
         slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plot_pearsr_df[target_label], plot_pearsr_df['pred'])
         ax = sns.lmplot(x=target_label, y='pred', data=plot_pearsr_df)
-        ax.set(title=f"R^2: {np.round(r_value**2, 2)} (p-value: {np.round(p_value, 7)}\nPearson's R: {np.round(pears,2)} (p-value: {np.round(pval, 7)})")
+        ax.set(title=f"R^2: {np.round(r_value**2, 2)}; Pearson's R: {np.round(pears,2)}\n(p-value: {np.round(pval, 7)})")
         #ax.set(ylim=(0,1), xlim=(0,1)) #set a x/y-limit to get the same plots for a specific project
         ax.savefig(fold_path/"correlation_plot.png")
 
@@ -312,15 +312,16 @@ def categorical_crossval_(
 
     #CHANGED
 def _crossval_train(
-    *, fold_path, fold_df, fold, info, target_label, cat_labels, cont_labels #target_enc,fold_weights_train 
+    *, fold_path, fold_df, fold, info, target_label, cat_labels, cont_labels, binary_label #target_enc,fold_weights_train 
 ):
     """Helper function for training the folds."""
     assert fold_df.PATIENT.nunique() == len(fold_df)
     fold_path.mkdir(exist_ok=True, parents=True)
 
     #CHANGED
+    #added stratification at train_test_split
     train_patients, valid_patients = train_test_split(
-        fold_df.PATIENT) #, stratify=fold_df[target_label]
+        fold_df.PATIENT, stratify=fold_df[binary_label])
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
     train_df.drop(columns='slide_path').to_csv(fold_path/'train.csv', index=False)
