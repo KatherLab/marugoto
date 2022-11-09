@@ -243,6 +243,7 @@ def categorical_crossval_(
             torch.save(folds, fold_path)
         #add option to create balanced folds based on binary equivalent
         else:
+            print(f"Using StratifiedKFold with binarized variable {binary_label}")
             skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
             patient_df = df.groupby('PATIENT').first().reset_index()
             folds = tuple(skf.split(patient_df.PATIENT, patient_df[binary_label])) # patient_df['SITE_CODE'])) with stratified potentially
