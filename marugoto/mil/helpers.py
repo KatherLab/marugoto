@@ -172,8 +172,11 @@ def deploy_categorical_model_(
     # scaler=MinMaxScaler()
     # test_df[target_label] = scaler.fit_transform(test_df[[target_label]])
 
+    #saving test.csv for later ROC curve generation
+
     patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
+    test_df.to_csv(f'{output_path}/test.csv', index=False)
     patient_preds_df.to_csv(preds_csv, index=False)
 
 
@@ -181,6 +184,7 @@ def categorical_crossval_(
     clini_excel: PathLike, slide_csv: PathLike, feature_dir: PathLike, output_path: PathLike,
     *,
     target_label: str,
+    binary_label: Optional[str] = None,
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
     n_splits: int = 5,
@@ -232,10 +236,17 @@ def categorical_crossval_(
         folds = torch.load(fold_path)
     else:
         #added shuffling with seed 1337
-        skf = KFold(n_splits=n_splits, shuffle=True, random_state=1337)
-        patient_df = df.groupby('PATIENT').first().reset_index()
-        folds = tuple(skf.split(patient_df.PATIENT, patient_df[target_label])) # patient_df['SITE_CODE'])) with stratified potentially
-        torch.save(folds, fold_path)
+        if not binary_label:
+            skf = KFold(n_splits=n_splits, shuffle=True, random_state=1337)
+            patient_df = df.groupby('PATIENT').first().reset_index()
+            folds = tuple(skf.split(patient_df.PATIENT, patient_df[target_label])) # patient_df['SITE_CODE'])) with stratified potentially
+            torch.save(folds, fold_path)
+        #add option to create balanced folds based on binary equivalent
+        else:
+            skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
+            patient_df = df.groupby('PATIENT').first().reset_index()
+            folds = tuple(skf.split(patient_df.PATIENT, patient_df[binary_label])) # patient_df['SITE_CODE'])) with stratified potentially
+            torch.save(folds, fold_path)          
 
     info['folds'] = [
         {
