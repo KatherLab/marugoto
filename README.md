@@ -3,8 +3,8 @@
 Note: for more information regarding setting up marugoto on your system and file management for your project, see [documentation](https://github.com/KatherLab/marugoto/blob/main/Documentation.md).
 
 
-Our workflow uses a DL approach which is self supervised feature extraction with attMIL workflow. This approaches addresses a weakly supervised classification problem in which the objective is to predict a slide label from a collection of individual tiles.
-Some studies have reported a performance gain of the self-supervised learning-attMIL approach compared to the classical approach.
+Our workflow uses a DL approach which performs self-supervised feature extraction with attMIL workflow. This approach addresses a weakly supervised classification problem in which the objective is to predict a slide label from a collection of individual tiles.
+Some studies have reported a performance gain of the self-supervised-learning attMIL approach compared to the classical approach.
 Wang et al. trained a ResNet-50 on 3200 WSIs from TCGA via the RetCCL self-supervised learning algorithm. We used pre-trained architectures to extract 2048 features (“Wang-attMIL”) per tile.
 
 ## Feature extraction
