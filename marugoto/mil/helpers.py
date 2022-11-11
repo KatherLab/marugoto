@@ -233,13 +233,13 @@ def categorical_crossval_(
     df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label) #categories
     
     #get rid of NA values in the target for the clini table
-    df = df.drop((df[df[target_label].isna()]).index)
+    df = (df.drop((df[df[target_label].isna()]).index)).reset_index()
 
     if (fold_path := output_path/'folds.pt').exists():
         folds = torch.load(fold_path)
     else:
         #added shuffling with seed 1337
-        if not binary_label:
+        if binary_label is None:
             skf = KFold(n_splits=n_splits, shuffle=True, random_state=1337)
             patient_df = df.groupby('PATIENT').first().reset_index()
             folds = tuple(skf.split(patient_df.PATIENT, patient_df[target_label])) # patient_df['SITE_CODE'])) with stratified potentially
