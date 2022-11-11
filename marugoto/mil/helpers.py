@@ -249,6 +249,7 @@ def categorical_crossval_(
             if least_populated_class < n_splits:
                 print(f"Warning: Cannot make requested {n_splits} folds, reduced to {least_populated_class} folds.")
                 n_splits = least_populated_class
+                info['n_splits'] = least_populated_class
             skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
             patient_df = df.groupby('PATIENT').first().reset_index()
             folds = tuple(skf.split(patient_df.PATIENT, patient_df[binary_label])) # patient_df['SITE_CODE'])) with stratified potentially
@@ -259,7 +260,7 @@ def categorical_crossval_(
             part: list(df.PATIENT[folds[fold][i]])
             for i, part in enumerate(['train', 'test'])
         }
-        for fold in range(n_splits) ]
+        for fold in range(info['n_splits']) ]
 
     with open(output_path/'info.json', 'w') as f:
         json.dump(info, f)
@@ -320,8 +321,12 @@ def _crossval_train(
 
     #CHANGED
     #added stratification at train_test_split
-    train_patients, valid_patients = train_test_split(
-        fold_df.PATIENT, stratify=fold_df[binary_label])
+    if not binary_label:
+        train_patients, valid_patients = train_test_split(
+            fold_df.PATIENT, stratify=fold_df[binary_label])
+    else:
+        train_patients, valid_patients = train_test_split(
+            fold_df.PATIENT)
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
     train_df.drop(columns='slide_path').to_csv(fold_path/'train.csv', index=False)
