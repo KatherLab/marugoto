@@ -29,7 +29,7 @@ class MILModel(nn.Module):
         self.head = head or nn.Sequential(
             nn.Flatten(),
             #nn.BatchNorm1d(256),
-            nn.Dropout(),
+            #nn.Dropout(),
             nn.Linear(256, n_out))
 
     #CHANGED
