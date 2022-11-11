@@ -231,6 +231,9 @@ def categorical_crossval_(
 
     #CHANGED
     df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label) #categories
+    
+    #get rid of NA values in the target for the clini table
+    df = df.drop((df[df[target_label].isna()]).index)
 
     if (fold_path := output_path/'folds.pt').exists():
         folds = torch.load(fold_path)
@@ -321,7 +324,7 @@ def _crossval_train(
 
     #CHANGED
     #added stratification at train_test_split
-    if not binary_label:
+    if binary_label is not None:
         train_patients, valid_patients = train_test_split(
             fold_df.PATIENT, stratify=fold_df[binary_label])
     else:
@@ -331,7 +334,6 @@ def _crossval_train(
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
     train_df.drop(columns='slide_path').to_csv(fold_path/'train.csv', index=False)
     valid_df.drop(columns='slide_path').to_csv(fold_path/'valid.csv', index=False)
-
 
     add_features = []
     if cat_labels: add_features.append((_make_cat_enc(train_df, cat_labels), fold_df[cat_labels].values))
