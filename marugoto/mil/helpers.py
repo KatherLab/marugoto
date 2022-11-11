@@ -15,6 +15,7 @@ import torch
 from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
 import scipy
+import os
 #from marugoto.data import FunctionTransformer
 
 from ._mil import train, deploy
@@ -307,7 +308,7 @@ def categorical_crossval_(
         pval = scipy.stats.pearsonr(plot_pearsr_df[target_label], plot_pearsr_df['pred'])[1]
         slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plot_pearsr_df[target_label], plot_pearsr_df['pred'])
         ax = sns.lmplot(x=target_label, y='pred', data=plot_pearsr_df)
-        ax.set(title=f"R^2: {np.round(r_value**2, 2)}; Pearson's R: {np.round(pears,2)}\n(p-value: {np.round(pval, 7)})")
+        ax.set(title=f"{os.path.basename(output_path)}\nR^2: {np.round(r_value**2, 2)} | Pearson's R: {np.round(pears,2)} | p-value: {np.round(pval, 7)}")
         #ax.set(ylim=(0,1), xlim=(0,1)) #set a x/y-limit to get the same plots for a specific project
         ax.savefig(fold_path/"correlation_plot.png")
 
