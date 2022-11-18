@@ -1,7 +1,6 @@
 # Regression まるごと—A Toolbox for Building Deep Learning Regression Workflows ##
 
-This repo has been adapted from the main Marugoto pipeline which only allowed classification problems.
-Please contact omarelnahhas1337@gmail.com to get it running in your environment, as packages such as sklearn have been changed in order to make it work, which have not been pushed to this repo.
+This repo has been adapted from the main Marugoto pipeline which only allowed classification problems, now allowing for attention-based multiple instance learning regression.
 
 
 Note: for more information regarding setting up marugoto on your system and file management for your project, see [documentation](https://github.com/KatherLab/marugoto/blob/main/Documentation.md).

@@ -30,7 +30,8 @@ from .utils import get_lds_kernel_window
 
 
 from marugoto.data import FunctionTransformer
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import r2_score
+from .loss import mean_squared_error
 #from sklearn.metrics.pairwise import manhattan_distances
 
 # from sklearn.neural_network import MLPRegressor #just to test a simpler model
@@ -168,13 +169,14 @@ def train(
     # )
     
     #for imbalanced regression
-    loss_func = WeightedL1Loss()
+    loss_func = WeightedMSELoss()
 
     dls = DataLoaders(train_dl, valid_dl)
     
     #SGD instead of Adam standard, from Graziani et al.
     #def opt_func(params, **kwargs): return OptimWrapper(SGD(params, lr=.0001, mom=.9, wd=0.01))
 
+    #mean squared error metric is 'handmade' from .loss file
     learn = Learner(dls, model, loss_func=loss_func, lr=.0001, wd=0.01,
                     metrics=[mean_squared_error], path=path)
 
