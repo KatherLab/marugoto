@@ -1,0 +1,6 @@
+h5py~=3.6
+numpy~=1.22
+pandas~=1.4
+torch~=1.8
+fastai~=2.5
+fire~=0.4

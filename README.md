@@ -107,3 +107,19 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 ## Advice
 
 - default batch size is 64 patients, consider to adapt for smaller cohorts
+
+## Running Marugoto in a Container
+
+First, to build the container, change into the repo's directory and run:
+
+```sh
+podman build --tag marugoto
+```
+
+Then, to run it:
+
+```sh
+podman run --rm -ti \
+    --security-opt=label=disable --hooks-dir=/usr/share/containers/oci/hooks.d/ \
+    marugoto.mil.train [...]  # or any other command
+```
