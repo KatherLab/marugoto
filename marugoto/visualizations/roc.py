@@ -1,6 +1,7 @@
-# %%
 from collections import namedtuple
 from typing import Iterable, Sequence, Optional, Tuple
+from pathlib import Path
+import argparse
 
 import numpy as np
 import scipy.stats as st
@@ -101,7 +102,8 @@ def plot_roc_curves(
 
 
 def plot_roc_curves_(
-        *pred_csvs: Iterable[str], target_label: str, true_label: str, outpath
+        pred_csvs: Iterable[str], target_label: str, true_label: str, outpath: Path,
+        subgroup_label: Optional[str],
 ) -> None:
     """Creates ROC curves.
 
@@ -112,7 +114,6 @@ def plot_roc_curves_(
         outpath:  Path to save the `.svg` to.
     """
     import pandas as pd
-    from pathlib import Path
     pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
 
     y_trues = [df[target_label] == true_label for df in pred_dfs]
@@ -124,10 +125,23 @@ def plot_roc_curves_(
         plot_roc_curve(ax, y_trues[0], y_preds[0], title=title)
     else:
         plot_roc_curves(ax, y_trues, y_preds, title=title)
-    fig.savefig(Path(outpath)/f'roc-{target_label}={true_label}.svg')
+    fig.savefig(outpath/f'roc-{target_label}={true_label}.svg')
     plt.close(fig)
 
 
 if __name__ == '__main__':
-    from fire import Fire
-    Fire(plot_roc_curves_)
+    parser = argparse.ArgumentParser(description='Create a ROC Curve.')
+    parser.add_argument('pred_csvs', metavar='PREDS_CSV', nargs='+', type=Path,
+                        help='Predictions to create ROC curves for.')
+    parser.add_argument('--target-label', required=True, type=str,
+                        help='The target label to calculate the ROC for.')
+    parser.add_argument('--true-label', required=True, type=str,
+                        help='The target label to calculate the ROC for.')
+    parser.add_argument('-o', '--outpath', required=True, type=Path,
+                        help='Path to save the `.svg` to.')
+    parser.add_argument('--subgroup-label', required=False, type=str,
+                        help='Path to save the `.svg` to.')
+
+    args = parser.parse_args()
+
+    plot_roc_curves_(**vars(args))
