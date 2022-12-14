@@ -120,12 +120,12 @@ follows:
     -v /path/to/cohort/dir:/workdir \
     -v /path/to/result/dir:/results \
     -- \
-    python -m marugoto.mil train \
-        --clini-table /workdir/TCGA-CRC-DX_CLINI.xlsx \
-        --slide-csv /workdir/TCGA-CRC-DX_SLIDE.csv \
-        --feature-dir /workdir/features_norm_macenko_h5 \
-        --target-label isMSIH \
-        --output-path /results
+    marugoto.mil train \
+    --clini-table /workdir/TCGA-CRC-DX_CLINI.xlsx \
+    --slide-csv /workdir/TCGA-CRC-DX_SLIDE.csv \
+    --feature-dir /workdir/features_norm_macenko_h5 \
+    --target-label isMSIH \
+    --output-path /results
 ```
 
 For more information on how to run podman containers, please refer to the podman
