@@ -7,5 +7,6 @@ RUN pip install -r requirements.txt
 WORKDIR /workspace
 
 FROM develop AS deploy
-COPY . /workspace
+WORKDIR /marugoto
+COPY . /marugoto
 ENTRYPOINT [ "python3", "-m" ]

@@ -108,18 +108,25 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 
 - default batch size is 64 patients, consider to adapt for smaller cohorts
 
+
 ## Running Marugoto in a Container
 
-First, to build the container, change into the repo's directory and run:
+Marugoto can be conveniently run in a podman container.  To do so, use the
+`marugoto-container.sh` convenience script.  Training a MIL model can be done as
+follows:
 
 ```sh
-podman build --tag marugoto
+./marugoto-container.sh \
+    -v /path/to/cohort/dir:/workdir \
+    -v /path/to/result/dir:/results \
+    -- \
+    python -m marugoto.mil train \
+        --clini-table /workdir/TCGA-CRC-DX_CLINI.xlsx \
+        --slide-csv /workdir/TCGA-CRC-DX_SLIDE.csv \
+        --feature-dir /workdir/features_norm_macenko_h5 \
+        --target-label isMSIH \
+        --output-path /results
 ```
 
-Then, to run it:
-
-```sh
-podman run --rm -ti \
-    --security-opt=label=disable --hooks-dir=/usr/share/containers/oci/hooks.d/ \
-    marugoto.mil.train [...]  # or any other command
-```
+For more information on how to run podman containers, please refer to the podman
+documentation.
