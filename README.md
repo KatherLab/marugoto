@@ -93,7 +93,9 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         deployment/path/fold-*/patient-preds.csv \
         --outpath output/path \
         --target-label isMSIH \
-        --true-label MSIH
+        --true-label MSIH \
+        (optional: subgroup analysis) --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
+        (optional: subgroup analysis) --subgroup-label 'PRETREATED'
 
 ## Plot Precision Recall Curve ##
 
@@ -120,12 +122,12 @@ follows:
     -v /path/to/cohort/dir:/workdir \
     -v /path/to/result/dir:/results \
     -- \
-    marugoto.mil train \
-    --clini-table /workdir/TCGA-CRC-DX_CLINI.xlsx \
-    --slide-csv /workdir/TCGA-CRC-DX_SLIDE.csv \
-    --feature-dir /workdir/features_norm_macenko_h5 \
-    --target-label isMSIH \
-    --output-path /results
+    python -m marugoto.mil train \
+        --clini-table /workdir/TCGA-CRC-DX_CLINI.xlsx \
+        --slide-csv /workdir/TCGA-CRC-DX_SLIDE.csv \
+        --feature-dir /workdir/features_norm_macenko_h5 \
+        --target-label isMSIH \
+        --output-path /results
 ```
 
 For more information on how to run podman containers, please refer to the podman
