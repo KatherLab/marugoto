@@ -197,7 +197,7 @@ def deploy_categorical_model_(
 
 
 def categorical_crossval_(
-    clini_excel: PathLike, slide_csv: PathLike, feature_dir: PathLike, output_path: PathLike,
+    clini_table: PathLike, slide_csv: PathLike, feature_dir: PathLike, output_path: PathLike,
     *,
     target_label: str,
     cat_labels: Sequence[str] = [],
@@ -227,7 +227,7 @@ def categorical_crossval_(
     # not used during actual training
     info = {
         'description': 'MIL cross-validation',
-        'clini': str(Path(clini_excel).absolute()),
+        'clini': str(Path(clini_table).absolute()),
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
         'target_label': str(target_label),
@@ -237,7 +237,7 @@ def categorical_crossval_(
         'n_splits': n_splits,
         'datetime': datetime.now().astimezone().isoformat()}
 
-    clini_df = pd.read_csv(clini_excel, dtype=str) if Path(clini_excel).suffix == '.csv' else pd.read_excel(clini_excel, dtype=str)
+    clini_df = pd.read_csv(clini_table, dtype=str) if Path(clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
@@ -249,7 +249,7 @@ def categorical_crossval_(
     categories = np.array(categories)
     info['categories'] = list(categories)
 
-    df = get_cohort_df(clini_excel, slide_csv, feature_dir, target_label, categories)
+    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
     info['class distribution'] = {'overall': {
         k: int(v) for k, v in df[target_label].value_counts().items()}}
