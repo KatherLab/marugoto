@@ -19,7 +19,7 @@ while [[ $# -gt  0 ]]; do
     esac
 done
 
-image_id=$(podman build -q .)
+image_id=$(podman build -q $(dirname -- "$0"))
 
 podman run --rm -ti \
     --security-opt=label=disable --hooks-dir=/usr/share/containers/oci/hooks.d/ \
