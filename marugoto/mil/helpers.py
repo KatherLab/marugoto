@@ -16,6 +16,7 @@ from sklearn.preprocessing import MinMaxScaler
 import seaborn as sns
 import scipy
 import os
+from collections import defaultdict
 #from marugoto.data import FunctionTransformer
 
 from ._mil import train, deploy
@@ -219,7 +220,8 @@ def categorical_crossval_(
         'cont_labels': [str(c) for c in cont_labels],
         'output_path': str(output_path.absolute()),
         'n_splits': n_splits,
-        'datetime': datetime.now().astimezone().isoformat()}
+        'datetime': datetime.now().astimezone().isoformat(),
+        'categories': list(categories)}
 
     clini_df = pd.read_csv(clini_excel, dtype=str) if Path(clini_excel).suffix == '.csv' else pd.read_excel(clini_excel, dtype=str)
     clini_df = clini_df.astype({target_label: 'float32'})
@@ -247,16 +249,86 @@ def categorical_crossval_(
             torch.save(folds, fold_path)
         #add option to create balanced folds based on binary equivalent
         else:
-            print(f"Using StratifiedKFold with binarized variable {binary_label}")
+            print(f"Using binarized variable {binary_label} for stratification")
             all_classes = df[binary_label].unique()
             least_populated_class = min([np.sum(df[binary_label] == x) for x in all_classes])
             if least_populated_class < n_splits:
                 print(f"Warning: Cannot make requested {n_splits} folds, reduced to {least_populated_class} folds.")
                 n_splits = least_populated_class
                 info['n_splits'] = least_populated_class
-            skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
-            patient_df = df.groupby('PATIENT').first().reset_index()
-            folds = tuple(skf.split(patient_df.PATIENT, patient_df[binary_label])) # patient_df['SITE_CODE'])) with stratified potentially
+            
+            site_split=True #TODO: remove and make a flag
+            if site_split: #TODO: supports binary only for now
+                print('Creating site-based splits...')
+                
+                #create a pivot table for data overview
+                f_pt=pd.pivot_table(data=df, values='PATIENT', index=[binary_label,'SITE'], aggfunc='count')
+                ratio_pt=pd.pivot_table(data=df, values='PATIENT', index=[binary_label], aggfunc='count')
+                # MUT_ratio = ratio_pt.PATIENT.MUT / (ratio_pt.PATIENT.MUT + ratio_pt.PATIENT.WT)
+                f=dict(f_pt)['PATIENT']
+
+                # reformat pivot table output
+                dic=defaultdict(dict)
+                for categ,site in f.keys():
+                    dic[site][categ] = f[categ][site]
+                
+                # fill missing categories with a 0 value
+                for items in dic.items():
+                    for categ in info['categories']:
+                        try:
+                            items[1][categ]
+                        except:
+                            dic[items[0]][categ] = 0
+                
+                # create a dataframe with the total and positive-class ratios
+                l = []
+                for items in dic.items():
+                    l.append([items[0], items[1][f'{info["categories"][0]}'], 
+                        items[1][f'{info["categories"][1]}'], 
+                        (items[1][f'{info["categories"][0]}']/ratio_pt.PATIENT[f'{info["categories"][0]}']),
+                        (items[1][f'{info["categories"][0]}'] + items[1][f'{info["categories"][1]}']) \
+                        / (ratio_pt.PATIENT[f'{info["categories"][0]}'] + ratio_pt.PATIENT[f'{info["categories"][1]}'])])
+
+                sbsplit_df=pd.DataFrame(l, columns=['SITE', f'{info["categories"][0]}_count', \
+                                        f'{info["categories"][0]}_count', f'{info["categories"][0]}_ratio', 'TOTAL_ratio'])
+
+                # find the stratified split 80-20 for groups and categories
+                # following the correct predefined total and positive-class ratios
+                split_frac=1-1/n_splits #.8 for 5 splits
+                std=0.05
+                train_folds=[]
+                test_folds=[]
+                fold_i=0
+                # begin=time.time()
+                while fold_i < n_splits:
+                    samp_df=sbsplit_df
+                    samp=sbsplit_df.sample(frac=split_frac)
+                    mut=samp[f'{info["categories"][0]}_ratio'].sum()
+                    tot=samp.TOTAL_ratio.sum()
+                    #print(f'{(mut,tot)}')
+                    if (tot >= split_frac-std and tot <= split_frac+std) and \
+                    (mut >= split_frac-std and mut <= split_frac+std): #we want .75 - .85 per train fold
+                        print(f'Found feasible split for fold {fold_i}: {(mut,tot)}')
+                        train_set=samp.SITE.values
+                        train_folds.append(train_set)
+                        fold_i+=1
+                        test_df=samp_df.drop(samp.index)
+                        test_set=test_df.SITE.values
+                        test_folds.append(test_set)
+                
+                # breakpoint()
+                #create similar format for folds.pt
+                folds=[]
+                for i in range(n_splits):
+                    folds.append((np.where(df['SITE'].isin(train_folds[i]))[0], 
+                    np.where(df['SITE'].isin(test_folds[i]))[0]))
+                folds=tuple(folds)
+                # breakpoint()
+                
+            else:
+                skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
+                patient_df = df.groupby('PATIENT').first().reset_index()
+                folds = tuple(skf.split(patient_df.PATIENT, patient_df[binary_label])) # patient_df['SITE_CODE'])) with stratified potentially
             torch.save(folds, fold_path)          
 
     info['folds'] = [
@@ -327,10 +399,10 @@ def _crossval_train(
     #added stratification at train_test_split
     if binary_label is not None:
         train_patients, valid_patients = train_test_split(
-            fold_df.PATIENT, stratify=fold_df[binary_label])
+            fold_df.PATIENT, stratify=fold_df[binary_label], random_state=1337)
     else:
         train_patients, valid_patients = train_test_split(
-            fold_df.PATIENT)
+            fold_df.PATIENT, random_state=1337)
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
     train_df.drop(columns='slide_path').to_csv(fold_path/'train.csv', index=False)
