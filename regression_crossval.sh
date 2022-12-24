@@ -1,11 +1,11 @@
-full_dir=/home/omarelnahhas/omars_hdd/HRD/TCGA-FEATURES_train/TCGA-UCEC-DX-features
-dir=${full_dir##*/}
-for target in CX8 CX9 CX10 CX11 CX12 CX13 CX14 CX15 CX16 CX17
+for full_dir in /home/omarelnahhas/omars_hdd/omar/immunoproject/*
 do
+	dir=${full_dir##*/}
+	echo "Running Fraction Genome Altered for ${dir}"
 	python -m marugoto.mil crossval \
-		--clini-excel /home/omarelnahhas/TCGA_Markowetz/norm_CLINI_Markowetz.csv \
-		--slide-csv /home/omarelnahhas/TCGA_Markowetz/tcga_merkowetz_SLIDE.csv  \
-		--feature-dir /mnt/Sirius_03_empty/TCGA-ALL-FEATURES/ \
-		--output-path /home/omarelnahhas/TCGA_Markowetz/${target}/ALL_FEATS_DIR \
-		--target-label "${target}"
+		--clini-excel /home/omarelnahhas/omars_hdd/omar/immunoproject_project/clini_positive_control/Fraction_GA.xlsx \
+		--slide-csv ${full_dir}/*_SLIDE.csv  \
+		--feature-dir ${full_dir}/xiyue-wang-macenko \
+		--output-path /home/omarelnahhas/omars_hdd/omar/immunoproject_project/clini_positive_control/experiments/Fraction_GA/${dir} \
+		--target-label Fraction_GA
 done
