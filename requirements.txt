@@ -1,5 +1,6 @@
 h5py~=3.6
 numpy~=1.22
+openpyxl~=3.0
 pandas~=1.4
 torch~=1.8
 fastai~=2.5
