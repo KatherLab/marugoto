@@ -1,7 +1,10 @@
-FROM nvcr.io/nvidia/pytorch:22.11-py3 AS develop
-COPY requirements.txt /marugoto/requirements.txt
-RUN pip install -r /marugoto/requirements.txt
-WORKDIR /workspace
+FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime AS develop
+WORKDIR /resources
+COPY requirements.txt .
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y gcc git python3-dev libopenslide0 wget; \
+    pip install -r requirements.txt
 
 FROM develop AS deploy
 WORKDIR /marugoto
