@@ -1,12 +1,11 @@
 from collections import namedtuple
-from typing import Iterable, Sequence, Optional, Tuple
+from typing import Iterable, Sequence, Optional, Tuple, Mapping
 from pathlib import Path
 import argparse
 import numpy as np
 import scipy.stats as st
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
-
 
 all = ["plot_roc_curve", "plot_roc_curves", "plot_roc_curves_"]
 
@@ -17,6 +16,7 @@ def plot_roc_curve(
     y_pred: Sequence[float],
     *,
     title: Optional[str] = None,
+    label: Optional[str] = None,
 ) -> int:
     """Plots a single ROC curve.
 
@@ -30,7 +30,7 @@ def plot_roc_curve(
         The area under the curve.
     """
     fpr, tpr, _ = roc_curve(y_true, y_pred)
-    ax.plot(fpr, tpr)
+    ax.plot(fpr, tpr, label=label)
 
     style_auc(ax)
 
@@ -100,12 +100,40 @@ def plot_roc_curves(
     return l, h
 
 
+def plot_rocs_for_subtypes(
+    ax: plt.Axes,
+    groups: Mapping[str, Tuple[Sequence[int], Sequence[float]]],
+    *,
+    target_label: str,
+    subgroup_label: str,
+    subgroups: Optional[Sequence[str]],
+) -> None:
+    tpas = [
+        (subgroup, TPA(y_true, y_pred, roc_auc_score(y_true, y_pred)))
+        for subgroup, (y_true, y_pred) in groups.items()
+        if not subgroups or subgroup in subgroups
+    ]
+    # sort trues, preds, AUCs by AUC
+    tpas = sorted(tpas, key=lambda x: x[1].auc, reverse=True)
+
+    # plot rocs
+    for subgroup, (t, p, auc) in tpas:
+        fpr, tpr, _ = roc_curve(t, p)
+        ax.plot(fpr, tpr, label=f"{subgroup} (AUC = {auc:0.2f})")
+
+    # style plot
+    style_auc(ax)
+    ax.legend(loc="lower right")
+    return ax.set_title(f"{target_label} Subgrouped by {subgroup_label}")
+
+
 def plot_roc_curves_(
     pred_csvs: Iterable[str],
     target_label: str,
     true_label: str,
     outpath: Path,
     subgroup_label: Optional[str],
+    subgroups: Optional[Sequence[str]],
     clini_table: Optional[str],
 ) -> None:
     """Creates ROC curves.
@@ -122,35 +150,31 @@ def plot_roc_curves_(
     pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
 
     if subgroup_label:
+        assert (
+            len(pred_dfs) == 1
+        ), "currently subgroup analysis is only supported for a singular set of predictions"
+        pred_df = pred_dfs[0]
+
         # get clini table for extracting subgroups from respective column
         clini = pd.read_excel(clini_table)
-        # create list with patients according grouped into classes according to col_name
-        patients_subgroups = clini["PATIENT"].groupby(clini[subgroup_label]).apply(list)
 
-        # create ROC for each subgroup
-        for group in patients_subgroups.keys():
-            patients_dfs_subgroups = []
-            for i in range(len(pred_dfs)):
-                patients_dfs_subgroups.append(
-                    pred_dfs[i][
-                        pred_dfs[i]["PATIENT"].isin((patients_subgroups.get(key=group)))
-                    ]
-                )
-            y_trues = [df[target_label] == true_label for df in patients_dfs_subgroups]
-            y_preds = [
-                pd.to_numeric(df[f"{target_label}_{true_label}"])
-                for df in patients_dfs_subgroups
-            ]
+        groups = {}
+        for subgroup, subgroup_patients in clini.PATIENT.groupby(clini[subgroup_label]):
+            subgroup_preds = pred_df[pred_df.PATIENT.isin(subgroup_patients)]
+            y_true = subgroup_preds[target_label] == true_label
+            y_pred = pd.to_numeric(subgroup_preds[f"{target_label}_{true_label}"])
+            groups[subgroup] = (y_true, y_pred)
 
-            # create plot
-            fig, ax = plt.subplots()
-            title = f"{target_label} = {true_label} for {group}"
-            if len(pred_dfs) == 1:
-                plot_roc_curve(ax, y_trues[0], y_preds[0], title=title)
-            else:
-                plot_roc_curves(ax, y_trues, y_preds, title=title)
-            fig.savefig(outpath / f"roc-{target_label}={true_label}-{group}.svg")
-            plt.close(fig)
+        fig, ax = plt.subplots()
+        plot_rocs_for_subtypes(
+            ax,
+            groups,
+            target_label=target_label,
+            subgroup_label=subgroup_label,
+            subgroups=subgroups,
+        )
+        fig.savefig(outpath / f"roc-{target_label}-subtyped_by_{subgroup_label}.svg")
+
     else:
         y_trues = [df[target_label] == true_label for df in pred_dfs]
         y_preds = [pd.to_numeric(df[f"{target_label}_{true_label}"]) for df in pred_dfs]
@@ -196,11 +220,26 @@ if __name__ == "__main__":
         help="Column name in Clini where to get the subgroups from.",
     )
     parser.add_argument(
+        "--subgroup",
+        dest="subgroups",
+        required=False,
+        type=str,
+        action="append",
+        help=(
+            "A subgroup to include in the ouput.  "
+            "If none are given, a ROC curve for each of the subgroups will be created."
+        ),
+    )
+    parser.add_argument(
         "--clini-table",
         required=False,
         type=Path,
         help="Path to get subgroup information from Clini table from.",
     )
     args = parser.parse_args()
+    if args.clini_table is not None and args.subgroup_label is None:
+        parser.error(
+            "supplying a clini table only makes sense if `--subgroup-label` is specified"
+        )
 
     plot_roc_curves_(**vars(args))
