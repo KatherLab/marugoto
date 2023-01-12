@@ -119,10 +119,7 @@ follows:
 
 ```sh
 ./marugoto-container.sh \
-    -v /path/to/cohort/dir:/workdir \
-    -v /path/to/result/dir:/results \
-    -- \
-    python -m marugoto.mil train \
+    marugoto.mil train \
         --clini-table /workdir/TCGA-CRC-DX_CLINI.xlsx \
         --slide-csv /workdir/TCGA-CRC-DX_SLIDE.csv \
         --feature-dir /workdir/features_norm_macenko_h5 \
