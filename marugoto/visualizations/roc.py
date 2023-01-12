@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from collections import namedtuple
 from typing import Iterable, Sequence, Optional, Tuple, Mapping
 from pathlib import Path
@@ -7,7 +9,7 @@ import scipy.stats as st
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 
-all = ["plot_roc_curve", "plot_roc_curves", "plot_roc_curves_"]
+all = ["plot_roc_curve", "plot_roc_curves", "plot_rocs_for_subtypes", "plot_roc_curves_"]
 
 
 def plot_roc_curve(
@@ -108,6 +110,11 @@ def plot_rocs_for_subtypes(
     subgroup_label: str,
     subgroups: Optional[Sequence[str]],
 ) -> None:
+    """Plots a ROC for multiple groups.
+
+    Will a ROC curve for each y_true, y_pred pair in groups, titled with its
+    key.  The subg
+    """
     tpas = [
         (subgroup, TPA(y_true, y_pred, roc_auc_score(y_true, y_pred)))
         for subgroup, (y_true, y_pred) in groups.items()
