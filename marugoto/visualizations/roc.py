@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from collections import namedtuple
-from typing import Iterable, Sequence, Optional, Tuple, Mapping
+from typing import Iterable, Sequence, Optional, Tuple, Mapping, List
 from pathlib import Path
 import argparse
 import numpy as np
@@ -9,7 +9,12 @@ import scipy.stats as st
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
 
-all = ["plot_roc_curve", "plot_roc_curves", "plot_rocs_for_subtypes", "plot_roc_curves_"]
+all = [
+    "plot_roc_curve",
+    "plot_roc_curves",
+    "plot_rocs_for_subtypes",
+    "plot_roc_curves_",
+]
 
 
 def plot_roc_curve(
@@ -115,11 +120,19 @@ def plot_rocs_for_subtypes(
     Will a ROC curve for each y_true, y_pred pair in groups, titled with its
     key.  The subg
     """
-    tpas = [
-        (subgroup, TPA(y_true, y_pred, roc_auc_score(y_true, y_pred)))
-        for subgroup, (y_true, y_pred) in groups.items()
-        if not subgroups or subgroup in subgroups
-    ]
+    tpas: List[Tuple[str, TPA]] = []
+    for subgroup, (y_true, y_pred) in groups.items():
+        if subgroups and subgroup not in subgroups:
+            continue
+
+        if len(np.unique(y_true)) <= 1:
+            print(
+                f"subgroup {subgroup} does only have samples of one class... skipping"
+            )
+            continue
+
+        tpas.append((subgroup, TPA(y_true, y_pred, roc_auc_score(y_true, y_pred))))
+
     # sort trues, preds, AUCs by AUC
     tpas = sorted(tpas, key=lambda x: x[1].auc, reverse=True)
 
@@ -228,6 +241,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--subgroup",
+        metavar="SUBGROUP",
         dest="subgroups",
         required=False,
         type=str,
