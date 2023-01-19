@@ -98,6 +98,14 @@ def categorical_aggregated_(*preds_csvs: str, outpath: str, target_label: str) -
     stats_df.to_csv(outpath/f'{target_label}-categorical-stats-aggregated.csv')
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    from warnings import warn
     from fire import Fire
+
+    warn(
+        "this categorical statistics script is deprecated and may be removed in the future.  "
+        "Please use wanshi.stats_categorical <https://github.com/KatherLab/wanshi-utils> instead.",
+        FutureWarning,
+    )
+
     Fire(categorical_aggregated_)

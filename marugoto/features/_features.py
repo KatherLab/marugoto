@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 from typing import Any, Sequence, Optional, TypeVar, Union
+from warnings import warn
 
 import h5py
 import numpy as np
@@ -34,6 +35,11 @@ def make_dataset(
     seed: Optional[int] = 0
 ) -> ZipDataset:
     """Creates a instance-wise dataset from MIL bag H5DFs."""
+
+    warn(
+        "feature models are deprecated and may be removed in the future.", FutureWarning
+    )
+
     assert len(bags) == len(targets), \
         'number of bags and ground truths does not match!'
     tile_ds: ConcatDataset = ConcatDataset(
@@ -68,6 +74,9 @@ class H5TileDataset(Dataset):
     """
 
     def __post_init__(self):
+        warn(
+            "feature models are deprecated and may be removed in the future", FutureWarning
+        )
         assert not self.seed or self.tile_no, \
             '`seed` must not be set if `tile_no` is `None`.'
 
@@ -111,6 +120,9 @@ def train(
         valid_bags:  H5s containing the bags to validate on.
         train_targets:  The ground thruths of the validation bags.
     """
+    warn(
+        "feature models are deprecated and may be removed in the future.", FutureWarning
+    )
     print(type(target_enc))
     train_ds = make_dataset(target_enc, train_bags, train_targets)
     valid_ds = make_dataset(target_enc, valid_bags, valid_targets, seed=0)
@@ -149,6 +161,9 @@ def train(
 
 
 def deploy(test_df, learn, target_label):
+    warn(
+        "feature models are deprecated and may be removed in the future.", FutureWarning
+    )
     target_enc = learn.dls.train.dataset._datasets[-1].encode
     categories = target_enc.categories_[0]
 
