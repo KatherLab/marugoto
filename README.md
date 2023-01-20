@@ -62,12 +62,12 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 ### Deploy a Model on Another Cohort ###
 
     python -m marugoto.mil deploy \
-        --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
+        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
         --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
-        --target-label isMSIH \
+        --target_label isMSIH \
         --model-path training-dir/export.pkl \
-        --output-path output/path
+        --output_path output/path
 
 ### Cross-Validate a Model ###
 
@@ -84,7 +84,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
     python -m marugoto.stats.categorical \
         deployment/path/fold-*/patient-preds.csv \
         --outpath output/path \
-        --target-label isMSIH \
+        --target_label isMSIH \
         --true-label MSIH
 
 ## Plot ROC Curve ##
