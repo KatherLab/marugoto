@@ -23,8 +23,10 @@ def _top_att_tiles_df(
         out_dir = Path(patient_preds_csv).parent
     learn = load_learner(model_path)
 
-    if ~isinstance(feature_dir, list):
-        feature_dir = [feature_dir]
+    # glob does not work with lists anymore 
+    #if ~isinstance(feature_dir, list):
+    #    feature_dir = [feature_dir]
+    
     df = mil.data.get_cohort_df(
         clini_table=patient_preds_csv,
         slide_csv=slide_csv,
