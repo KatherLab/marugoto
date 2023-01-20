@@ -12,6 +12,8 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from fastai.vision.learner import load_learner
 import torch
+from torch import nn
+import torch.nn.functional as F
 
 from marugoto.data import SKLearnEncoder
 
@@ -125,6 +127,35 @@ def train_categorical_model_(
 
     learn.export()
 
+    patient_preds, patient_targs = learn.get_preds(act=nn.Softmax(dim=1))
+
+    patient_preds_df = pd.DataFrame.from_dict({
+        'PATIENT': valid_df.PATIENT.values,
+        target_label: valid_df[target_label].values,
+        **{f'{target_label}_{cat}': patient_preds[:, i]
+            for i, cat in enumerate(categories)}})
+
+    # calculate loss
+    patient_preds = patient_preds_df[[
+        f'{target_label}_{cat}' for cat in categories]].values
+    patient_targs = target_enc.transform(
+        patient_preds_df[target_label].values.reshape(-1, 1))
+    patient_preds_df['loss'] = F.cross_entropy(
+        torch.tensor(patient_preds), torch.tensor(patient_targs),
+        reduction='none')
+
+    patient_preds_df['pred'] = categories[patient_preds.argmax(1)]
+
+    # reorder dataframe and sort by loss (best predictions first)
+    patient_preds_df = patient_preds_df[[
+        'PATIENT',
+        target_label,
+        'pred',
+        *(f'{target_label}_{cat}' for cat in categories),
+        'loss']]
+    patient_preds_df = patient_preds_df.sort_values(by='loss')
+    patient_preds_df.to_csv(output_path/'patient-preds-validset.csv', index=False)
+
 
 def _make_cat_enc(df, cats) -> SKLearnEncoder:
     # create a scaled one-hot encoder for the categorical values
@@ -183,6 +214,7 @@ def deploy_categorical_model_(
 
     learn = load_learner(model_path)
     target_enc = get_target_enc(learn)
+    
     categories = target_enc.categories_[0]
 
     target_label = target_label or learn.target_label
@@ -190,7 +222,6 @@ def deploy_categorical_model_(
     cont_labels = cont_labels or learn.cont_labels
 
     test_df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
-
     patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
     patient_preds_df.to_csv(preds_csv, index=False)
