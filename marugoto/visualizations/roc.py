@@ -8,6 +8,7 @@ import numpy as np
 import scipy.stats as st
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
+from warnings import warn
 
 all = [
     "plot_roc_curve",
@@ -36,6 +37,11 @@ def plot_roc_curve(
     Returns:
         The area under the curve.
     """
+    warn(
+        "ROC curves in marugoto are deprecated.  "
+        "Please use wanshi <https://github.com/KatherLab/wanshi-utils/tree/main/wanshi/visualizations> instead.",
+        FutureWarning,
+    )
     fpr, tpr, _ = roc_curve(y_true, y_pred)
     ax.plot(fpr, tpr, label=label)
 
@@ -78,6 +84,11 @@ def plot_roc_curves(
     Returns:
         The 95% confidence interval of the area under the curve.
     """
+    warn(
+        "ROC curves in marugoto are deprecated.  "
+        "Please use wanshi <https://github.com/KatherLab/wanshi-utils/tree/main/wanshi/visualizations> instead.",
+        FutureWarning,
+    )
     # sort trues, preds, AUCs by AUC
     tpas = [
         TPA(t, p, roc_auc_score(t, p)) for t, p in zip(y_trues, y_preds)
@@ -120,6 +131,11 @@ def plot_rocs_for_subtypes(
     Will a ROC curve for each y_true, y_pred pair in groups, titled with its
     key.  The subg
     """
+    warn(
+        "ROC curves in marugoto are deprecated.  "
+        "Please use wanshi <https://github.com/KatherLab/wanshi-utils/tree/main/wanshi/visualizations> instead.",
+        FutureWarning,
+    )
     tpas: List[Tuple[str, TPA]] = []
     for subgroup, (y_true, y_pred) in groups.items():
         if subgroups and subgroup not in subgroups:
@@ -164,6 +180,11 @@ def plot_roc_curves_(
         true_label:  The positive class for the ROC.
         outpath:  Path to save the `.svg` to.
     """
+    warn(
+        "ROC curves in marugoto are deprecated.  "
+        "Please use wanshi <https://github.com/KatherLab/wanshi-utils/tree/main/wanshi/visualizations> instead.",
+        FutureWarning,
+    )
     import pandas as pd
 
     # prediction dataframes (in 5-fold crossval = 5 dataframes)
@@ -210,6 +231,11 @@ def plot_roc_curves_(
 
 
 if __name__ == "__main__":
+    warn(
+        "ROC curves in marugoto are deprecated.  "
+        "Please use wanshi <https://github.com/KatherLab/wanshi-utils/tree/main/wanshi/visualizations> instead.",
+        FutureWarning,
+    )
     parser = argparse.ArgumentParser(description="Create a ROC Curve.")
     parser.add_argument(
         "pred_csvs",
