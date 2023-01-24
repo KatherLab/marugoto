@@ -116,6 +116,10 @@ def plot_precision_recall_curves_(
     """
     import pandas as pd
     from pathlib import Path
+
+    outpath = Path(outpath)
+    outpath.mkdir(parents=True, exist_ok=True)
+
     pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
 
     y_trues = [df[target_label] == true_label for df in pred_dfs]
@@ -127,7 +131,7 @@ def plot_precision_recall_curves_(
     else:
         plot_precision_recall_curves(ax, y_trues, y_preds, title=title)
 
-    fig.savefig(Path(outpath)/f'prc-{target_label}={true_label}.svg')
+    fig.savefig(outpath/f'prc-{target_label}={true_label}.svg')
     plt.close(fig)
 
 

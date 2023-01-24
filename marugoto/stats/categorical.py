@@ -88,6 +88,7 @@ def categorical_aggregated_(*preds_csvs: str, outpath: str, target_label: str) -
     well as sum the total instane count for each class.
     """
     outpath = Path(outpath)
+    outpath.mkdir(parents=True, exist_ok=True)
     preds_dfs = {
         Path(p).parent.name: categorical(
             pd.read_csv(p, dtype=str), target_label)

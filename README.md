@@ -84,12 +84,11 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
     python -m marugoto.stats.categorical \
         deployment/path/fold-*/patient-preds.csv \
         --outpath output/path \
-        --target_label isMSIH \
-        --true-label MSIH
+        --target_label isMSIH
 
 ## Plot ROC Curve ##
 
-    python -m marugoto.visualizations.roc  \
+    python -m marugoto.visualizations.roc \
         deployment/path/fold-*/patient-preds.csv \
         --outpath output/path \
         --target-label isMSIH \
@@ -99,7 +98,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 
 ## Plot Precision Recall Curve ##
 
-    python -m marugoto.visualizations.prc  \
+    python -m marugoto.visualizations.prc \
         deployment/path/fold-*/patient-preds.csv \
         --outpath output/path \
         --target-label isMSIH \

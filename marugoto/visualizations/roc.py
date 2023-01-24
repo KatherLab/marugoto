@@ -187,6 +187,9 @@ def plot_roc_curves_(
     )
     import pandas as pd
 
+    outpath = Path(outpath)
+    outpath.mkdir(parents=True, exist_ok=True)
+
     # prediction dataframes (in 5-fold crossval = 5 dataframes)
     pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
 
