@@ -48,7 +48,7 @@ def make_dataset(
     ys = np.repeat(targets, lens)
     ds = ZipDataset(
         tile_ds,
-        EncodedDataset(target_enc, ys)) # dtype=torch.float32 #     type: ignore
+        EncodedDataset(target_enc, ys))  # dtype=torch.float32 #     type: ignore
     return ds
 
 
@@ -97,7 +97,6 @@ class H5TileDataset(Dataset):
             len(f['feats'])
 
 
-
 def train(
     *,
     target_enc,
@@ -134,7 +133,8 @@ def train(
         valid_ds, batch_size=512, shuffle=False, num_workers=os.cpu_count())
     batch = train_dl.one_batch()
 
-    model = create_head(batch[0].shape[-1], batch[1].shape[-1], concat_pool=False)[1:]
+    model = create_head(batch[0].shape[-1],
+                        batch[1].shape[-1], concat_pool=False)[1:]
 
     # weigh inversely to class occurances
     counts = pd.value_counts(train_targets)
@@ -175,7 +175,8 @@ def deploy(test_df, learn, target_label):
     test_dl = DataLoader(
         test_ds, batch_size=512, shuffle=False, num_workers=os.cpu_count())
 
-    patient_preds, patient_targs = learn.get_preds(dl=test_dl, act=nn.Softmax())
+    patient_preds, patient_targs = learn.get_preds(
+        dl=test_dl, act=nn.Softmax())
 
     # create tile wise result dataframe
     tiles_per_slide = [len(ds) for ds in test_ds._datasets[0].datasets]

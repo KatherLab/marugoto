@@ -21,7 +21,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 ### Train a Neural Network on Pre-Extracted Features ###
 
     python -m marugoto.features train \
-        --clini-excel tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
+        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
         --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \
@@ -30,7 +30,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 ### Deploy a Model on Another Cohort ###
 
     python -m marugoto.features deploy \
-        --clini-excel tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
+        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
         --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \
@@ -40,7 +40,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
 ### Cross-Validate a Model ###
 
     python -m marugoto.features crossval \
-        --clini-excel tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
+        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
         --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \

@@ -20,7 +20,7 @@ PathLike = Union[str, Path]
 
 
 def train_categorical_model_(
-        clini_excel: PathLike,
+        clini_table: PathLike,
         slide_csv: PathLike,
         feature_dir: PathLike,
         target_label: str,
@@ -30,7 +30,7 @@ def train_categorical_model_(
     """Train a categorical model on a cohort's tile's features.
 
     Args:
-        clini_excel:  Path to the clini table.
+        clini_table:  Path to the clini table.
         slide_csv:  Path to the slide tabel.
         target_label:  Label to train for.
         categories:  Categories to train for, or all categories appearing in the
@@ -47,7 +47,7 @@ def train_categorical_model_(
     from datetime import datetime
     info: Dict[str, Any] = {
         'description': 'training on tile features',
-        'clini': str(Path(clini_excel).absolute()),
+        'clini': str(Path(clini_table).absolute()),
         'slide': str(Path(slide_csv).absolute()),
         'feature_dir': str(feature_dir.absolute()),
         'target_label': str(target_label),
@@ -59,7 +59,9 @@ def train_categorical_model_(
         print(f'{model_path} already exists. Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_excel, dtype=str)
+    clini_df = pd.read_excel(clini_table, dtype=str)
+    clini_df = pd.read_csv(clini_table, dtype=str) if Path(
+        clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
