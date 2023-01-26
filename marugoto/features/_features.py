@@ -48,7 +48,7 @@ def make_dataset(
     ys = np.repeat(targets, lens)
     ds = ZipDataset(
         tile_ds,
-        EncodedDataset(target_enc, ys, dtype=torch.float32)) #     type: ignore
+        EncodedDataset(target_enc, ys)) # dtype=torch.float32 #     type: ignore
     return ds
 
 
@@ -87,7 +87,7 @@ class H5TileDataset(Dataset):
                     torch.manual_seed(self.seed)
                 index = torch.randint(
                     len(f['feats']), (self.tile_no or len(f['feats']),))[index]
-            return torch.tensor(f['feats'][index]).unsqueeze(0)
+            return torch.tensor(f['feats'][index], dtype=torch.float32).unsqueeze(0)
 
     def __len__(self):
         if self.tile_no:
@@ -106,7 +106,7 @@ def train(
     valid_bags: Sequence[Path],
     valid_targets: Sequence[T],
     n_epoch: int = 32,
-    patience: int = 4,
+    patience: int = 16,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
