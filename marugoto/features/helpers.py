@@ -59,7 +59,6 @@ def train_categorical_model_(
         print(f'{model_path} already exists. Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_table, dtype=str)
     clini_df = pd.read_csv(clini_table, dtype=str) if Path(
         clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
@@ -117,7 +116,7 @@ def train_categorical_model_(
 
 
 def deploy_categorical_model_(
-        clini_excel: PathLike,
+        clini_table: PathLike,
         slide_csv: PathLike,
         feature_dir: PathLike,
         target_label: str,
@@ -127,7 +126,7 @@ def deploy_categorical_model_(
     """Deploy a categorical model on a cohort's tile's features.
 
     Args:
-        clini_excel:  Path to the clini table.
+        clini_table:  Path to the clini table.
         slide_csv:  Path to the slide tabel.
         target_label:  Label to train for.
         feature_dir:  Path containing the features.
@@ -141,7 +140,8 @@ def deploy_categorical_model_(
         print(f'{preds_csv} already exists!  Skipping...')
         return
 
-    clini_df = pd.read_excel(clini_excel, dtype=str)
+    clini_df = pd.read_csv(clini_table, dtype=str) if Path(
+        clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
     slide_df = pd.read_csv(slide_csv, dtype=str)
     test_df = clini_df.merge(slide_df, on='PATIENT')
 
@@ -157,7 +157,8 @@ def deploy_categorical_model_(
     slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
     test_df = test_df.merge(slide_df, on='FILENAME')
 
-    patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
+    patient_preds_df = deploy(
+        test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
     patient_preds_df.to_csv(preds_csv, index=False)
 
@@ -254,7 +255,8 @@ def categorical_crossval_(
 
         from marugoto.features import deploy
         fold_test_df = df.iloc[test_idxs]
-        patient_preds_df = deploy(test_df=fold_test_df, learn=learn, target_label=target_label)
+        patient_preds_df = deploy(
+            test_df=fold_test_df, learn=learn, target_label=target_label)
         patient_preds_df.to_csv(preds_csv, index=False)
 
 
