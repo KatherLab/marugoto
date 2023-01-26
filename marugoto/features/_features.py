@@ -104,8 +104,10 @@ def train(
     train_targets: Sequence[T],
     valid_bags: Sequence[Path],
     valid_targets: Sequence[T],
+    valid_df,
+    target_label,
     n_epoch: int = 32,
-    patience: int = 16,
+    patience: int = 2,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
@@ -157,7 +159,41 @@ def train(
 
     learn.fit_one_cycle(n_epoch=n_epoch, lr_max=1e-3, cbs=cbs)
 
-    return learn
+    patient_preds, patient_targs = learn.get_preds(act=nn.Softmax())
+    categories = target_enc.categories_[0]
+    # create tile wise result dataframe
+    tiles_per_slide = [len(ds) for ds in valid_ds._datasets[0].datasets]
+    tile_score_df = pd.DataFrame.from_dict({
+        'PATIENT': np.repeat(valid_df.PATIENT.values, tiles_per_slide),
+        **{f'{target_label}_{cat}': patient_preds[:, i]
+           for i, cat in enumerate(categories)}})
+
+    # calculate mean patient score, merge with ground truth label
+    patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
+    patient_preds_df = patient_preds_df.merge(
+        valid_df[['PATIENT', target_label]].drop_duplicates(), on='PATIENT')
+
+    # calculate loss
+    patient_preds = patient_preds_df[[
+        f'{target_label}_{cat}' for cat in categories]].values
+    patient_targs = target_enc.transform(
+        patient_preds_df[target_label].values.reshape(-1, 1))
+    patient_preds_df['loss'] = F.cross_entropy(
+        torch.tensor(patient_preds), torch.tensor(patient_targs),
+        reduction='none')
+
+    patient_preds_df['pred'] = categories[patient_preds.argmax(1)]
+
+    # reorder dataframe and sort by loss (best predictions first)
+    patient_preds_df = patient_preds_df[[
+        'PATIENT',
+        target_label,
+        'pred',
+        *(f'{target_label}_{cat}' for cat in categories),
+        'loss']]
+    patient_preds_df = patient_preds_df.sort_values(by='loss')
+    patient_preds_df
+    return learn, patient_preds_df
 
 
 def deploy(test_df, learn, target_label):

@@ -104,15 +104,18 @@ def train_categorical_model_(
     with open(output_path/'info.json', 'w') as f:
         json.dump(info, f)
 
-    learn = train(
+    learn, patient_preds_df = train(
         target_enc=target_enc,
         train_bags=train_df.slide_path.values,
         train_targets=train_df[target_label].values,
         valid_bags=valid_df.slide_path.values,
         valid_targets=valid_df[target_label].values,
+        valid_df=valid_df,
+        target_label=target_label,
         path=output_path)
 
     learn.export()
+    patient_preds_df.to_csv(output_path/'patient-preds-validset.csv')
 
 
 def deploy_categorical_model_(
