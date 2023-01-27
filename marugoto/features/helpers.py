@@ -104,7 +104,7 @@ def train_categorical_model_(
     with open(output_path/'info.json', 'w') as f:
         json.dump(info, f)
 
-    learn, patient_preds_df = train(
+    learn, patient_preds_df, tile_score_slide_df = train(
         target_enc=target_enc,
         train_bags=train_df.slide_path.values,
         train_targets=train_df[target_label].values,
@@ -116,6 +116,7 @@ def train_categorical_model_(
 
     learn.export()
     patient_preds_df.to_csv(output_path/'patient-preds-validset.csv')
+    tile_score_slide_df.to_csv(output_path/'tile-preds-validset.csv')
 
 
 def deploy_categorical_model_(
@@ -160,10 +161,11 @@ def deploy_categorical_model_(
     slide_df['FILENAME'] = slide_df.slide_path.map(lambda p: p.stem)
     test_df = test_df.merge(slide_df, on='FILENAME')
 
-    patient_preds_df = deploy(
+    patient_preds_df, tile_preds_df = deploy(
         test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
     patient_preds_df.to_csv(preds_csv, index=False)
+    tile_preds_df.to_csv(output_path/'tile-preds.csv', index=False)
 
 
 def categorical_crossval_(

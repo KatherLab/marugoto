@@ -107,7 +107,7 @@ def train(
     valid_df,
     target_label,
     n_epoch: int = 32,
-    patience: int = 2,
+    patience: int = 10,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
@@ -168,6 +168,7 @@ def train(
         **{f'{target_label}_{cat}': patient_preds[:, i]
            for i, cat in enumerate(categories)}})
 
+    tile_score_slide_df = pd.merge(tile_score_df, valid_df[['PATIENT','slide_path']], on='PATIENT')
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
     patient_preds_df = patient_preds_df.merge(
@@ -193,7 +194,7 @@ def train(
         'loss']]
     patient_preds_df = patient_preds_df.sort_values(by='loss')
     patient_preds_df
-    return learn, patient_preds_df
+    return learn, patient_preds_df, tile_score_slide_df
 
 
 def deploy(test_df, learn, target_label):
@@ -202,7 +203,7 @@ def deploy(test_df, learn, target_label):
     )
     target_enc = learn.dls.train.dataset._datasets[-1].encode
     categories = target_enc.categories_[0]
-
+    
     test_ds = make_dataset(
         target_enc=target_enc,
         bags=test_df.slide_path.values,
@@ -220,6 +221,8 @@ def deploy(test_df, learn, target_label):
         'PATIENT': np.repeat(test_df.PATIENT.values, tiles_per_slide),
         **{f'{target_label}_{cat}': patient_preds[:, i]
            for i, cat in enumerate(categories)}})
+    
+    tile_score_slide_df = pd.merge(tile_score_df, test_df[['PATIENT', 'slide_path']], on='PATIENT')
 
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
@@ -245,4 +248,4 @@ def deploy(test_df, learn, target_label):
         *(f'{target_label}_{cat}' for cat in categories),
         'loss']]
     patient_preds_df = patient_preds_df.sort_values(by='loss')
-    return patient_preds_df
+    return patient_preds_df, tile_score_slide_df
