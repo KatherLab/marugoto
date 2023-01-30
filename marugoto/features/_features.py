@@ -105,6 +105,27 @@ class H5TileDataset(Dataset):
             len(f['feats'])
 
 
+def add_coordinates(tile_score_slide_df):
+    tile_score_slide_coords_df = pd.DataFrame()
+    pat_list = tile_score_slide_df.PATIENT.unique()
+    for patient in pat_list:
+        df_patient = tile_score_slide_df[tile_score_slide_df.PATIENT == patient].copy()
+        slide_path = df_patient.slide_path[0]
+        with h5py.File(slide_path, mode='r') as f:
+            coords = np.array(f.get('coords'))
+            df_patient['x'] = coords[:, 0]
+            df_patient['y'] = coords[:, 1]
+            f.close()
+        df_patient.drop(['slide_path'], axis=1, inplace=True)
+
+        if tile_score_slide_coords_df.empty:
+            tile_score_slide_coords_df = df_patient
+        else:
+            tile_score_slide_coords_df = pd.concat(
+                [tile_score_slide_coords_df, df_patient], axis=0)
+
+        return tile_score_slide_coords_df
+
 def train(
     *,
     target_enc,
@@ -115,8 +136,8 @@ def train(
     valid_df,
     target_label,
     n_epoch: int = 32,
-    patience: int = 10,
-    tile_no = None,
+    patience: int = 1,
+    tile_no=None,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
@@ -180,7 +201,7 @@ def train(
 
     tile_score_slide_df = pd.merge(
         tile_score_df, valid_df[['PATIENT', 'slide_path']], on='PATIENT')
-
+    tile_score_slide_coords_df = add_coordinates(tile_score_slide_df)
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
     patient_preds_df = patient_preds_df.merge(
@@ -206,10 +227,10 @@ def train(
         'loss']]
     patient_preds_df = patient_preds_df.sort_values(by='loss')
     patient_preds_df
-    return learn, patient_preds_df, tile_score_slide_df
+    return learn, patient_preds_df, tile_score_slide_coords_df
 
 
-def deploy(test_df, learn, target_label, tile_no = None):
+def deploy(test_df, learn, target_label, tile_no=None):
     warn(
         "feature models are deprecated and may be removed in the future.", FutureWarning
     )
@@ -237,7 +258,7 @@ def deploy(test_df, learn, target_label, tile_no = None):
 
     tile_score_slide_df = pd.merge(
         tile_score_df, test_df[['PATIENT', 'slide_path']], on='PATIENT')
-
+    tile_score_slide_coords_df = add_coordinates(tile_score_slide_df)
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
     patient_preds_df = patient_preds_df.merge(
@@ -262,4 +283,4 @@ def deploy(test_df, learn, target_label, tile_no = None):
         *(f'{target_label}_{cat}' for cat in categories),
         'loss']]
     patient_preds_df = patient_preds_df.sort_values(by='loss')
-    return patient_preds_df, tile_score_slide_df
+    return patient_preds_df, tile_score_slide_coords_df
