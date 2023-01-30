@@ -32,6 +32,7 @@ PathLike = Union[str, Path]
 def make_dataset(
     target_enc,
     bags: Sequence[Path], targets: Sequence[Any],
+    tile_no: int,
     seed: Optional[int] = 0
 ) -> ZipDataset:
     """Creates a instance-wise dataset from MIL bag H5DFs."""
@@ -43,7 +44,7 @@ def make_dataset(
     assert len(bags) == len(targets), \
         'number of bags and ground truths does not match!'
     tile_ds: ConcatDataset = ConcatDataset(
-        H5TileDataset(h5, seed=seed) for h5 in bags)
+        H5TileDataset(h5, tile_no, seed=seed) for h5 in bags)
     lens = np.array([len(ds) for ds in tile_ds.datasets])
     ys = np.repeat(targets, lens)
     ds = ZipDataset(
@@ -61,7 +62,8 @@ class H5TileDataset(Dataset):
     The file has to contain a dataset 'feats' of dimension NxF, where N is
     the number of tiles and F the dimension of the tile's feature vector.
     """
-    tile_no: Optional[int] = 256
+
+    tile_no: Optional[int] = None
     """Number of tiles to sample (with replacement) from the bag.
 
     If `tile_no` is `None`, _all_ the bag's tiles will be taken.
@@ -77,8 +79,11 @@ class H5TileDataset(Dataset):
         warn(
             "feature models are deprecated and may be removed in the future", FutureWarning
         )
-        assert not self.seed or self.tile_no, \
-            '`seed` must not be set if `tile_no` is `None`.'
+        # assert not self.seed or self.tile_no, \
+        #    '`seed` must not be set if `tile_no` is `None`.'
+        with h5py.File(self.h5path, mode='r') as f:
+            if not self.tile_no:
+                self.tile_no = len(f['feats'])
 
     def __getitem__(self, index) -> torch.Tensor:
         with h5py.File(self.h5path, mode='r') as f:
@@ -87,7 +92,10 @@ class H5TileDataset(Dataset):
                     torch.manual_seed(self.seed)
                 index = torch.randint(
                     len(f['feats']), (self.tile_no or len(f['feats']),))[index]
-            return torch.tensor(f['feats'][index], dtype=torch.float32).unsqueeze(0)
+                return torch.tensor(f['feats'][index], dtype=torch.float32).unsqueeze(0)
+
+            else:
+                return torch.tensor(f['feats'][index], dtype=torch.float32).unsqueeze(0)
 
     def __len__(self):
         if self.tile_no:
@@ -108,6 +116,7 @@ def train(
     target_label,
     n_epoch: int = 32,
     patience: int = 10,
+    tile_no = None,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
@@ -125,8 +134,9 @@ def train(
         "feature models are deprecated and may be removed in the future.", FutureWarning
     )
     print(type(target_enc))
-    train_ds = make_dataset(target_enc, train_bags, train_targets)
-    valid_ds = make_dataset(target_enc, valid_bags, valid_targets, seed=0)
+    train_ds = make_dataset(target_enc, train_bags, train_targets, tile_no)
+    valid_ds = make_dataset(target_enc, valid_bags,
+                            valid_targets, tile_no, seed=0)
 
     # build dataloaders
     train_dl = DataLoader(
@@ -168,7 +178,9 @@ def train(
         **{f'{target_label}_{cat}': patient_preds[:, i]
            for i, cat in enumerate(categories)}})
 
-    tile_score_slide_df = pd.merge(tile_score_df, valid_df[['PATIENT','slide_path']], on='PATIENT')
+    tile_score_slide_df = pd.merge(
+        tile_score_df, valid_df[['PATIENT', 'slide_path']], on='PATIENT')
+
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
     patient_preds_df = patient_preds_df.merge(
@@ -197,17 +209,18 @@ def train(
     return learn, patient_preds_df, tile_score_slide_df
 
 
-def deploy(test_df, learn, target_label):
+def deploy(test_df, learn, target_label, tile_no = None):
     warn(
         "feature models are deprecated and may be removed in the future.", FutureWarning
     )
     target_enc = learn.dls.train.dataset._datasets[-1].encode
     categories = target_enc.categories_[0]
-    
+
     test_ds = make_dataset(
         target_enc=target_enc,
         bags=test_df.slide_path.values,
-        targets=test_df[target_label].values)
+        targets=test_df[target_label].values,
+        tile_no=tile_no)
 
     test_dl = DataLoader(
         test_ds, batch_size=512, shuffle=False, num_workers=os.cpu_count())
@@ -221,8 +234,9 @@ def deploy(test_df, learn, target_label):
         'PATIENT': np.repeat(test_df.PATIENT.values, tiles_per_slide),
         **{f'{target_label}_{cat}': patient_preds[:, i]
            for i, cat in enumerate(categories)}})
-    
-    tile_score_slide_df = pd.merge(tile_score_df, test_df[['PATIENT', 'slide_path']], on='PATIENT')
+
+    tile_score_slide_df = pd.merge(
+        tile_score_df, test_df[['PATIENT', 'slide_path']], on='PATIENT')
 
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
