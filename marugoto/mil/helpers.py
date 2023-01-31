@@ -1,8 +1,7 @@
 from datetime import datetime
 import json
 from pathlib import Path
-from pyexpat import features
-from typing import Iterable, Optional, Sequence, Union
+from typing import Iterable, Optional, Sequence, Union, Dict, Any
 
 import numpy as np
 import pandas as pd
@@ -57,9 +56,7 @@ def train_categorical_model_(
 
     # just a big fat object to dump all kinds of info into for later reference
     # not used during actual training
-    from datetime import datetime
-
-    info = {
+    info: Dict[str, Any] = {
         "description": "MIL training",
         "clini": str(Path(clini_table).absolute()),
         "slide": str(Path(slide_csv).absolute()),
@@ -97,12 +94,11 @@ def train_categorical_model_(
 
     print("Overall distribution")
     print(df[target_label].value_counts())
-    if df[target_label].empty:
-        raise SystemExit(
-            "\nProgram terminated due to lack of input data set. Please double-check that the tables and feature directory belong to the same cohort.\n"
-        )
+    assert df[
+        target_label
+    ].empty, "no input dataset. Do the tables / feature dir belong to the same cohorts?"
 
-    info["class distribution"] = {  # type: ignore
+    info["class distribution"] = {
         "overall": {k: int(v) for k, v in df[target_label].value_counts().items()}
     }
 
@@ -115,10 +111,10 @@ def train_categorical_model_(
     train_df.drop(columns="slide_path").to_csv(output_path / "train.csv", index=False)
     valid_df.drop(columns="slide_path").to_csv(output_path / "valid.csv", index=False)
 
-    info["class distribution"]["training"] = {  # type: ignore
+    info["class distribution"]["training"] = {
         k: int(v) for k, v in train_df[target_label].value_counts().items()
     }
-    info["class distribution"]["validation"] = {  # type: ignore
+    info["class distribution"]["validation"] = {
         k: int(v) for k, v in valid_df[target_label].value_counts().items()
     }
 
