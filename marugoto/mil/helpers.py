@@ -103,9 +103,7 @@ def train_categorical_model_(
         )
 
     info["class distribution"] = {  # type: ignore
-        "overall": {
-            k: int(v) for k, v in df[target_label].value_counts().items()
-        }
+        "overall": {k: int(v) for k, v in df[target_label].value_counts().items()}
     }
 
     # Split off validation set
@@ -120,7 +118,7 @@ def train_categorical_model_(
     info["class distribution"]["training"] = {  # type: ignore
         k: int(v) for k, v in train_df[target_label].value_counts().items()
     }
-    info["class distribution"]["validation"] = {    # type: ignore
+    info["class distribution"]["validation"] = {  # type: ignore
         k: int(v) for k, v in valid_df[target_label].value_counts().items()
     }
 
@@ -346,7 +344,7 @@ def categorical_crossval_(
 
     else:
         # check the maximum amount of splits that can be made
-        distrib = info["class distribution"]["overall"] # type: ignore
+        distrib = info["class distribution"]["overall"]  # type: ignore
         least_populated_class = min(distrib, key=distrib.get)
         if distrib[least_populated_class] < n_splits:
             print(
@@ -368,7 +366,7 @@ def categorical_crossval_(
             part: list(df.PATIENT[folds[fold][i]])
             for i, part in enumerate(["train", "test"])
         }
-        for fold in range(info["n_splits"]) # type: ignore
+        for fold in range(info["n_splits"])  # type: ignore
     ]
 
     with open(output_path / "info.json", "w") as f:

@@ -129,7 +129,7 @@ def _make_multi_input_dataset(
     for i, (_, vals) in enumerate(add_features):
         assert len(vals) == len(
             targs
-        ), f"number of additional attributes #{i} and ground truths does not match!"    # type: ignore
+        ), f"number of additional attributes #{i} and ground truths does not match!"  # type: ignore
 
     bag_ds = BagDataset(bags, bag_size=bag_size)
 

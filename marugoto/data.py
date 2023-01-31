@@ -9,27 +9,25 @@ import numpy.typing as npt
 import torch
 
 
-__author__ = 'Marko van Treeck'
-__copyright__ = 'Copyright 2022, Kather Lab'
-__license__ = 'MIT'
-__version__ = '0.2.0'
-__maintainer__ = 'Marko van Treeck'
-__email__ = 'mvantreeck@ukaachen.de'
+__author__ = "Marko van Treeck"
+__copyright__ = "Copyright 2022, Kather Lab"
+__license__ = "MIT"
+__version__ = "0.2.0"
+__maintainer__ = "Marko van Treeck"
+__email__ = "mvantreeck@ukaachen.de"
 
 
-__all__ = ['ZipDataset', 'EncodedDataset', 'SKLearnEncoder', 'MapDataset']
+__all__ = ["ZipDataset", "EncodedDataset", "SKLearnEncoder", "MapDataset"]
 
 __changelog__ = {
-    '0.2.0': 'Add MapDataset',
+    "0.2.0": "Add MapDataset",
 }
 
 
 class ZipDataset(Dataset):
     # TODO Upgrade typing to PEP 646 once Python 3.11 hits
     def __init__(
-            self,
-            *datasets: Dataset,
-            strict: bool = True, flatten: bool = True
+        self, *datasets: Dataset, strict: bool = True, flatten: bool = True
     ) -> None:
         """A dataset zipping multiple other datasets together.
 
@@ -47,12 +45,12 @@ class ZipDataset(Dataset):
         `flatten` is true, the output will have the shape 64x2, while if
         `flatten` is false, it will have shape 64x2x1.
         """
-        warnings.warn('ZipDataset will be deprecated soon', DeprecationWarning)
+        warnings.warn("ZipDataset will be deprecated soon", DeprecationWarning)
         if strict:
             assert all(len(ds) == len(datasets[0]) for ds in datasets)  # type: ignore
             self._len = len(datasets[0])  # type: ignore
         else:
-            self._len = min(len(ds) for ds in datasets) # type: ignore
+            self._len = min(len(ds) for ds in datasets)  # type: ignore
         self._datasets = datasets
         self.flatten = flatten
 
@@ -61,14 +59,17 @@ class ZipDataset(Dataset):
 
     def __getitem__(self, index: int) -> Any:
         if self.flatten:
-            return tuple(itertools.chain.from_iterable(ds[index] for ds in self._datasets))
+            return tuple(
+                itertools.chain.from_iterable(ds[index] for ds in self._datasets)
+            )
         else:
-            return tuple(itertools.chain.from_iterable([ds[index]] for ds in self._datasets))
+            return tuple(
+                itertools.chain.from_iterable([ds[index]] for ds in self._datasets)
+            )
 
-    def new_empty(self) -> 'ZipDataset':
+    def new_empty(self) -> "ZipDataset":
         new_dss = [
-            ds.new_empty() if hasattr(ds, 'new_empty') else ds
-            for ds in self._datasets
+            ds.new_empty() if hasattr(ds, "new_empty") else ds for ds in self._datasets
         ]
         ds = ZipDataset(*new_dss, strict=False)
         return ds
@@ -76,10 +77,10 @@ class ZipDataset(Dataset):
 
 class MapDataset(Dataset):
     def __init__(
-            self,
-            func: Callable,
-            *datasets: Union[npt.NDArray, Dataset],
-            strict: bool = True
+        self,
+        func: Callable,
+        *datasets: Union[npt.NDArray, Dataset],
+        strict: bool = True
     ) -> None:
         """A dataset mapping over a function over other datasets.
 
@@ -93,9 +94,9 @@ class MapDataset(Dataset):
         """
         if strict:
             assert all(len(ds) == len(datasets[0]) for ds in datasets)  # type: ignore
-            self._len = len(datasets[0])    # type: ignore
+            self._len = len(datasets[0])  # type: ignore
         elif datasets:
-            self._len = min(len(ds) for ds in datasets) # type: ignore
+            self._len = min(len(ds) for ds in datasets)  # type: ignore
         else:
             self._len = 0
 
@@ -109,13 +110,15 @@ class MapDataset(Dataset):
         return self.func(*[ds[index] for ds in self._datasets])
 
     def new_empty(self):
-        #FIXME hack to appease fastai's export
+        # FIXME hack to appease fastai's export
         return self
 
 
 class SKLearnEncoder(Protocol):
     """An sklearn-style encoder."""
+
     categories_: Sequence[Sequence[str]]
+
     def transform(self, x: Sequence[Sequence[Any]]):
         ...
 
@@ -136,5 +139,5 @@ class EncodedDataset(MapDataset):
 
     def _unsqueeze_to_float32(self, x):
         return torch.tensor(
-            self.encode.transform(np.array(x).reshape(1, -1)),
-            dtype=torch.float32)
+            self.encode.transform(np.array(x).reshape(1, -1)), dtype=torch.float32
+        )

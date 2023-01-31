@@ -51,7 +51,7 @@ def train(
     """
     target_enc, targs = targets
     train_ds = make_dataset(
-        bags=bags[~valid_idxs], # type: ignore  # arrays cannot be used a slices yet
+        bags=bags[~valid_idxs],  # type: ignore  # arrays cannot be used a slices yet
         targets=(target_enc, targs[~valid_idxs]),
         add_features=[(enc, vals[~valid_idxs]) for enc, vals in add_features],
         bag_size=512,
