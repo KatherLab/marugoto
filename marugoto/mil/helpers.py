@@ -30,10 +30,10 @@ PathLike = Union[str, Path]
 
 
 def train_categorical_model_(
-    clini_table: PathLike,
-    slide_csv: PathLike,
-    feature_dir: PathLike,
-    output_path: PathLike,
+    clini_table: Path,
+    slide_csv: Path,
+    feature_dir: Path,
+    output_path: Path,
     *,
     target_label: str,
     cat_labels: Sequence[str] = [],
@@ -102,8 +102,8 @@ def train_categorical_model_(
             "\nProgram terminated due to lack of input data set. Please double-check that the tables and feature directory belong to the same cohort.\n"
         )
 
-    info["class distribution"] = {
-        "overall": {  # type: ignore
+    info["class distribution"] = {  # type: ignore
+        "overall": {
             k: int(v) for k, v in df[target_label].value_counts().items()
         }
     }
@@ -120,7 +120,7 @@ def train_categorical_model_(
     info["class distribution"]["training"] = {  # type: ignore
         k: int(v) for k, v in train_df[target_label].value_counts().items()
     }
-    info["class distribution"]["validation"] = {  # type: ignore
+    info["class distribution"]["validation"] = {    # type: ignore
         k: int(v) for k, v in valid_df[target_label].value_counts().items()
     }
 
@@ -222,11 +222,11 @@ def _make_cont_enc(df, conts) -> SKLearnEncoder:
 
 
 def deploy_categorical_model_(
-    clini_table: PathLike,
-    slide_csv: PathLike,
-    feature_dir: PathLike,
-    model_path: PathLike,
-    output_path: PathLike,
+    clini_table: Path,
+    slide_csv: Path,
+    feature_dir: Path,
+    model_path: Path,
+    output_path: Path,
     *,
     target_label: Optional[str] = None,
     cat_labels: Optional[str] = None,
@@ -267,17 +267,17 @@ def deploy_categorical_model_(
 
 
 def categorical_crossval_(
-    clini_table: PathLike,
-    slide_csv: PathLike,
-    feature_dir: PathLike,
-    output_path: PathLike,
+    clini_table: Path,
+    slide_csv: Path,
+    feature_dir: Path,
+    output_path: Path,
     *,
     target_label: str,
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
     n_splits: int = 5,
     # added option to use fixed folds from previous experiment
-    fixed_folds: Optional[PathLike] = None,
+    fixed_folds: Optional[Path] = None,
     categories: Optional[Iterable[str]] = None,
 ) -> None:
     """Performs a cross-validation for a categorical target.
@@ -346,7 +346,7 @@ def categorical_crossval_(
 
     else:
         # check the maximum amount of splits that can be made
-        distrib = info["class distribution"]["overall"]
+        distrib = info["class distribution"]["overall"] # type: ignore
         least_populated_class = min(distrib, key=distrib.get)
         if distrib[least_populated_class] < n_splits:
             print(
@@ -368,7 +368,7 @@ def categorical_crossval_(
             part: list(df.PATIENT[folds[fold][i]])
             for i, part in enumerate(["train", "test"])
         }
-        for fold in range(info["n_splits"])
+        for fold in range(info["n_splits"]) # type: ignore
     ]
 
     with open(output_path / "info.json", "w") as f:

@@ -3,11 +3,6 @@ from typing import Any, Iterable, Optional, Sequence, Tuple, TypeVar
 from pathlib import Path
 import os
 
-import h5py
-import torch
-from torch import nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset
 from fastai.vision.all import (
     Learner,
     DataLoader,
@@ -16,8 +11,14 @@ from fastai.vision.all import (
     SaveModelCallback,
     CSVLogger,
 )
-import pandas as pd
+import h5py
+import torch
+from torch import nn
+import torch.nn.functional as F
+from torch.utils.data import Dataset
 import numpy as np
+import numpy.typing as npt
+import pandas as pd
 
 from marugoto.data import SKLearnEncoder
 
@@ -34,9 +35,9 @@ T = TypeVar("T")
 def train(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[SKLearnEncoder, np.ndarray],
-    add_features: Iterable[Tuple[SKLearnEncoder, Sequence[Any]]] = [],
-    valid_idxs: np.ndarray,
+    targets: Tuple[SKLearnEncoder, npt.NDArray],
+    add_features: Iterable[Tuple[SKLearnEncoder, npt.NDArray]] = [],
+    valid_idxs: npt.NDArray[np.int_],
     n_epoch: int = 32,
     path: Optional[Path] = None,
 ) -> Learner:
@@ -50,14 +51,14 @@ def train(
     """
     target_enc, targs = targets
     train_ds = make_dataset(
-        bags=bags[~valid_idxs],
+        bags=bags[~valid_idxs], # type: ignore  # arrays cannot be used a slices yet
         targets=(target_enc, targs[~valid_idxs]),
         add_features=[(enc, vals[~valid_idxs]) for enc, vals in add_features],
         bag_size=512,
     )
 
     valid_ds = make_dataset(
-        bags=bags[valid_idxs],
+        bags=bags[valid_idxs],  # type: ignore  # arrays cannot be used a slices yet
         targets=(target_enc, targs[valid_idxs]),
         add_features=[(enc, vals[valid_idxs]) for enc, vals in add_features],
         bag_size=None,

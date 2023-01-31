@@ -1,11 +1,11 @@
 """Helper classes to manage pytorch data."""
-from dataclasses import dataclass
 import itertools
-from typing import Any, Callable, Sequence, Protocol
+from typing import Any, Callable, Sequence, Protocol, Union
 import warnings
 
 from torch.utils.data import Dataset
 import numpy as np
+import numpy.typing as npt
 import torch
 
 
@@ -49,10 +49,10 @@ class ZipDataset(Dataset):
         """
         warnings.warn('ZipDataset will be deprecated soon', DeprecationWarning)
         if strict:
-            assert all(len(ds) == len(datasets[0]) for ds in datasets)
-            self._len = len(datasets[0])
+            assert all(len(ds) == len(datasets[0]) for ds in datasets)  # type: ignore
+            self._len = len(datasets[0])  # type: ignore
         else:
-            self._len = min(len(ds) for ds in datasets)
+            self._len = min(len(ds) for ds in datasets) # type: ignore
         self._datasets = datasets
         self.flatten = flatten
 
@@ -74,34 +74,11 @@ class ZipDataset(Dataset):
         return ds
 
 
-@dataclass
-class EncodedDataset(Dataset):
-    encode: Any
-    dtype = None
-
-    def __getitem__(self, i: int) -> Any:
-        encoded = torch.tensor(
-            self.encode.transform(np.array(self.data[i]).reshape(1, -1)),
-            dtype=self.dtype)
-        return encoded
-
-    def __len__(self) -> int:
-        return len(self.data)
-
-    def new(self, data: Sequence[Any] = tuple()) -> 'EncodedDataset':
-        """Create a dataset with the same encoding but different data."""
-        return EncodedDataset(self.encode, data)
-
-    def new_empty(self) -> 'EncodedDataset':
-        """Create an empty dataset."""
-        return self.new()
-
-
 class MapDataset(Dataset):
     def __init__(
             self,
             func: Callable,
-            *datasets: Sequence[Any],
+            *datasets: Union[npt.NDArray, Dataset],
             strict: bool = True
     ) -> None:
         """A dataset mapping over a function over other datasets.
@@ -115,10 +92,10 @@ class MapDataset(Dataset):
                 dataset's length.
         """
         if strict:
-            assert all(len(ds) == len(datasets[0]) for ds in datasets)
-            self._len = len(datasets[0])
+            assert all(len(ds) == len(datasets[0]) for ds in datasets)  # type: ignore
+            self._len = len(datasets[0])    # type: ignore
         elif datasets:
-            self._len = min(len(ds) for ds in datasets)
+            self._len = min(len(ds) for ds in datasets) # type: ignore
         else:
             self._len = 0
 
@@ -139,12 +116,12 @@ class MapDataset(Dataset):
 class SKLearnEncoder(Protocol):
     """An sklearn-style encoder."""
     categories_: Sequence[Sequence[str]]
-    def transform(x: Sequence[Sequence[Any]]):
+    def transform(self, x: Sequence[Sequence[Any]]):
         ...
 
 
 class EncodedDataset(MapDataset):
-    def __init__(self, encode: SKLearnEncoder, values: Sequence[Any]):
+    def __init__(self, encode: SKLearnEncoder, values: npt.NDArray):
         """A dataset which first encodes its input data.
 
         This class is can be useful with classes such as fastai, where the

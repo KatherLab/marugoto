@@ -1,10 +1,12 @@
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Sequence, Tuple, Union
 from pathlib import Path
+
 import h5py
+import numpy.typing as npt
+import pandas as pd
 import torch
 from torch.utils.data import Dataset
-import pandas as pd
 
 from marugoto.data import EncodedDataset, MapDataset, SKLearnEncoder
 
@@ -37,11 +39,11 @@ class BagDataset(Dataset):
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
         # collect all the features
-        feats = []
+        feat_list = []
         for bag_file in self.bags[index]:
             with h5py.File(bag_file, "r") as f:
-                feats.append(torch.from_numpy(f["feats"][:]))
-        feats = torch.concat(feats).float()
+                feat_list.append(torch.from_numpy(f["feats"][:]))
+        feats = torch.concat(feat_list).float()
 
         # sample a subset, if required
         if self.bag_size:
@@ -70,8 +72,8 @@ def _to_fixed_size_bag(
 def make_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[SKLearnEncoder, Sequence[Any]],
-    add_features: Optional[Iterable[Tuple[Any, Sequence[Any]]]] = None,
+    targets: Tuple[SKLearnEncoder, npt.NDArray],
+    add_features: Optional[Iterable[Tuple[Any, npt.NDArray]]] = None,
     bag_size: Optional[int] = None,
 ) -> MapDataset:
     if add_features:
@@ -92,7 +94,7 @@ def _make_basic_dataset(
     *,
     bags: Sequence[Iterable[Path]],
     target_enc: SKLearnEncoder,
-    targs: Sequence[Any],
+    targs: npt.NDArray,
     bag_size: Optional[int] = None,
 ) -> MapDataset:
     assert len(bags) == len(targs), "number of bags and ground truths does not match!"
@@ -118,16 +120,16 @@ def zip_bag_targ(bag, targets):
 def _make_multi_input_dataset(
     *,
     bags: Sequence[Iterable[Path]],
-    targets: Tuple[SKLearnEncoder, Sequence[Any]],
-    add_features: Iterable[Tuple[Any, Sequence[Any]]],
+    targets: Tuple[SKLearnEncoder, npt.NDArray],
+    add_features: Iterable[Tuple[Any, npt.NDArray]],
     bag_size: Optional[int] = None,
 ) -> MapDataset:
     target_enc, targs = targets
-    assert len(bags) == len(targs), "number of bags and ground truths does not match!"
+    assert len(bags) == len(targs), "number of bags and ground truths does not match!"  # type: ignore
     for i, (_, vals) in enumerate(add_features):
         assert len(vals) == len(
             targs
-        ), f"number of additional attributes #{i} and ground truths does not match!"
+        ), f"number of additional attributes #{i} and ground truths does not match!"    # type: ignore
 
     bag_ds = BagDataset(bags, bag_size=bag_size)
 
@@ -166,9 +168,9 @@ def _attach_add_to_bag_and_zip_with_targ(bag, add, targ):
 
 
 def get_cohort_df(
-    clini_table: Union[Path, str],
-    slide_csv: Union[Path, str],
-    feature_dir: Union[Path, str],
+    clini_table: Path,
+    slide_csv: Path,
+    feature_dir: Path,
     target_label: str,
     categories: Iterable[str],
 ) -> pd.DataFrame:
