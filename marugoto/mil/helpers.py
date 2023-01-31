@@ -21,9 +21,13 @@ from ._mil import train, deploy
 from .data import get_cohort_df, get_target_enc
 
 __all__ = [
-    'train_categorical_model_', 'deploy_categorical_model_', 'categorical_crossval_']
+    "train_categorical_model_",
+    "deploy_categorical_model_",
+    "categorical_crossval_",
+]
 
 PathLike = Union[str, Path]
+
 
 def train_categorical_model_(
     clini_table: PathLike,
@@ -54,26 +58,31 @@ def train_categorical_model_(
     # just a big fat object to dump all kinds of info into for later reference
     # not used during actual training
     from datetime import datetime
-    info = {
-        'description': 'MIL training',
-        'clini': str(Path(clini_table).absolute()),
-        'slide': str(Path(slide_csv).absolute()),
-        'feature_dir': str(feature_dir.absolute()),
-        'target_label': str(target_label),
-        'cat_labels': [str(c) for c in cat_labels],
-        'cont_labels': [str(c) for c in cont_labels],
-        'output_path': str(output_path.absolute()),
-        'datetime': datetime.now().astimezone().isoformat()}
 
-    model_path = output_path/'export.pkl'
+    info = {
+        "description": "MIL training",
+        "clini": str(Path(clini_table).absolute()),
+        "slide": str(Path(slide_csv).absolute()),
+        "feature_dir": str(feature_dir.absolute()),
+        "target_label": str(target_label),
+        "cat_labels": [str(c) for c in cat_labels],
+        "cont_labels": [str(c) for c in cont_labels],
+        "output_path": str(output_path.absolute()),
+        "datetime": datetime.now().astimezone().isoformat(),
+    }
+
+    model_path = output_path / "export.pkl"
     if model_path.exists():
-        print(f'{model_path} already exists. Skipping...')
+        print(f"{model_path} already exists. Skipping...")
         return
 
-    clini_df = pd.read_csv(clini_table, dtype=str) if Path(
-        clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
+    clini_df = (
+        pd.read_csv(clini_table, dtype=str)
+        if Path(clini_table).suffix == ".csv"
+        else pd.read_excel(clini_table, dtype=str)
+    )
     slide_df = pd.read_csv(slide_csv, dtype=str)
-    df = clini_df.merge(slide_df, on='PATIENT')
+    df = clini_df.merge(slide_df, on="PATIENT")
 
     # filter na, infer categories if not given
     df = df.dropna(subset=target_label)
@@ -82,36 +91,40 @@ def train_categorical_model_(
     if not categories:
         categories = df[target_label].unique()
     categories = np.array(categories)
-    info['categories'] = list(categories)
+    info["categories"] = list(categories)
 
-    df = get_cohort_df(clini_table, slide_csv, feature_dir,
-                       target_label, categories)
+    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
-    print('Overall distribution')
+    print("Overall distribution")
     print(df[target_label].value_counts())
     if df[target_label].empty:
         raise SystemExit(
-            '\nProgram terminated due to lack of input data set. Please double-check that the tables and feature directory belong to the same cohort.\n')
+            "\nProgram terminated due to lack of input data set. Please double-check that the tables and feature directory belong to the same cohort.\n"
+        )
 
-    info['class distribution'] = {'overall': {  # type: ignore
-        k: int(v) for k, v in df[target_label].value_counts().items()}}
+    info["class distribution"] = {
+        "overall": {  # type: ignore
+            k: int(v) for k, v in df[target_label].value_counts().items()
+        }
+    }
 
     # Split off validation set
     train_patients, valid_patients = train_test_split(
-        df.PATIENT, stratify=df[target_label])
+        df.PATIENT, stratify=df[target_label]
+    )
     train_df = df[df.PATIENT.isin(train_patients)]
     valid_df = df[df.PATIENT.isin(valid_patients)]
-    train_df.drop(columns='slide_path').to_csv(
-        output_path/'train.csv', index=False)
-    valid_df.drop(columns='slide_path').to_csv(
-        output_path/'valid.csv', index=False)
+    train_df.drop(columns="slide_path").to_csv(output_path / "train.csv", index=False)
+    valid_df.drop(columns="slide_path").to_csv(output_path / "valid.csv", index=False)
 
-    info['class distribution']['training'] = {      # type: ignore
-        k: int(v) for k, v in train_df[target_label].value_counts().items()}
-    info['class distribution']['validation'] = {    # type: ignore
-        k: int(v) for k, v in valid_df[target_label].value_counts().items()}
+    info["class distribution"]["training"] = {  # type: ignore
+        k: int(v) for k, v in train_df[target_label].value_counts().items()
+    }
+    info["class distribution"]["validation"] = {  # type: ignore
+        k: int(v) for k, v in valid_df[target_label].value_counts().items()
+    }
 
-    with open(output_path/'info.json', 'w') as f:
+    with open(output_path / "info.json", "w") as f:
         json.dump(info, f)
 
     target_enc = OneHotEncoder(sparse=False).fit(categories.reshape(-1, 1))
@@ -119,10 +132,12 @@ def train_categorical_model_(
     add_features = []
     if cat_labels:
         add_features.append(
-            (_make_cat_enc(train_df, cat_labels), df[cat_labels].values))
+            (_make_cat_enc(train_df, cat_labels), df[cat_labels].values)
+        )
     if cont_labels:
         add_features.append(
-            (_make_cont_enc(train_df, cont_labels), df[cont_labels].values))
+            (_make_cont_enc(train_df, cont_labels), df[cont_labels].values)
+        )
 
     learn = train(
         bags=df.slide_path.values,
@@ -140,33 +155,42 @@ def train_categorical_model_(
 
     patient_preds, patient_targs = learn.get_preds(act=nn.Softmax(dim=1))
 
-    patient_preds_df = pd.DataFrame.from_dict({
-        'PATIENT': valid_df.PATIENT.values,
-        target_label: valid_df[target_label].values,
-        **{f'{target_label}_{cat}': patient_preds[:, i]
-            for i, cat in enumerate(categories)}})
+    patient_preds_df = pd.DataFrame.from_dict(
+        {
+            "PATIENT": valid_df.PATIENT.values,
+            target_label: valid_df[target_label].values,
+            **{
+                f"{target_label}_{cat}": patient_preds[:, i]
+                for i, cat in enumerate(categories)
+            },
+        }
+    )
 
     # calculate loss
-    patient_preds = patient_preds_df[[
-        f'{target_label}_{cat}' for cat in categories]].values
+    patient_preds = patient_preds_df[
+        [f"{target_label}_{cat}" for cat in categories]
+    ].values
     patient_targs = target_enc.transform(
-        patient_preds_df[target_label].values.reshape(-1, 1))
-    patient_preds_df['loss'] = F.cross_entropy(
-        torch.tensor(patient_preds), torch.tensor(patient_targs),
-        reduction='none')
+        patient_preds_df[target_label].values.reshape(-1, 1)
+    )
+    patient_preds_df["loss"] = F.cross_entropy(
+        torch.tensor(patient_preds), torch.tensor(patient_targs), reduction="none"
+    )
 
-    patient_preds_df['pred'] = categories[patient_preds.argmax(1)]
+    patient_preds_df["pred"] = categories[patient_preds.argmax(1)]
 
     # reorder dataframe and sort by loss (best predictions first)
-    patient_preds_df = patient_preds_df[[
-        'PATIENT',
-        target_label,
-        'pred',
-        *(f'{target_label}_{cat}' for cat in categories),
-        'loss']]
-    patient_preds_df = patient_preds_df.sort_values(by='loss')
-    patient_preds_df.to_csv(
-        output_path/'patient-preds-validset.csv', index=False)
+    patient_preds_df = patient_preds_df[
+        [
+            "PATIENT",
+            target_label,
+            "pred",
+            *(f"{target_label}_{cat}" for cat in categories),
+            "loss",
+        ]
+    ]
+    patient_preds_df = patient_preds_df.sort_values(by="loss")
+    patient_preds_df.to_csv(output_path / "patient-preds-validset.csv", index=False)
 
 
 def _make_cat_enc(df, cats) -> SKLearnEncoder:
@@ -179,21 +203,21 @@ def _make_cat_enc(df, cats) -> SKLearnEncoder:
     for cat in cats:
         weights = df[cat].value_counts(normalize=True)
         non_na_samples = df[cat].fillna(
-            pd.Series(np.random.choice(weights.index, len(df), p=weights)))
+            pd.Series(np.random.choice(weights.index, len(df), p=weights))
+        )
         fitting_cats.append(non_na_samples)
     cat_samples = np.stack(fitting_cats, axis=1)
     cat_enc = make_pipeline(
-        OneHotEncoder(sparse=False, handle_unknown='ignore'),
+        OneHotEncoder(sparse=False, handle_unknown="ignore"),
         StandardScaler(),
     ).fit(cat_samples)
     return cat_enc
 
 
 def _make_cont_enc(df, conts) -> SKLearnEncoder:
-    cont_enc = make_pipeline(
-        StandardScaler(),
-        SimpleImputer(fill_value=0)
-    ).fit(df[conts].values)
+    cont_enc = make_pipeline(StandardScaler(), SimpleImputer(fill_value=0)).fit(
+        df[conts].values
+    )
     return cont_enc
 
 
@@ -221,8 +245,8 @@ def deploy_categorical_model_(
     feature_dir = Path(feature_dir)
     model_path = Path(model_path)
     output_path = Path(output_path)
-    if (preds_csv := output_path/'patient-preds.csv').exists():
-        print(f'{preds_csv} already exists!  Skipping...')
+    if (preds_csv := output_path / "patient-preds.csv").exists():
+        print(f"{preds_csv} already exists!  Skipping...")
         return
 
     learn = load_learner(model_path)
@@ -234,16 +258,19 @@ def deploy_categorical_model_(
     cat_labels = cat_labels or learn.cat_labels
     cont_labels = cont_labels or learn.cont_labels
 
-    test_df = get_cohort_df(clini_table, slide_csv,
-                            feature_dir, target_label, categories)
-    patient_preds_df = deploy(
-        test_df=test_df, learn=learn, target_label=target_label)
+    test_df = get_cohort_df(
+        clini_table, slide_csv, feature_dir, target_label, categories
+    )
+    patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
     output_path.mkdir(parents=True, exist_ok=True)
     patient_preds_df.to_csv(preds_csv, index=False)
 
 
 def categorical_crossval_(
-    clini_table: PathLike, slide_csv: PathLike, feature_dir: PathLike, output_path: PathLike,
+    clini_table: PathLike,
+    slide_csv: PathLike,
+    feature_dir: PathLike,
+    output_path: PathLike,
     *,
     target_label: str,
     cat_labels: Sequence[str] = [],
@@ -273,21 +300,25 @@ def categorical_crossval_(
     # just a big fat object to dump all kinds of info into for later reference
     # not used during actual training
     info = {
-        'description': 'MIL cross-validation',
-        'clini': str(Path(clini_table).absolute()),
-        'slide': str(Path(slide_csv).absolute()),
-        'feature_dir': str(feature_dir.absolute()),
-        'target_label': str(target_label),
-        'cat_labels': [str(c) for c in cat_labels],
-        'cont_labels': [str(c) for c in cont_labels],
-        'output_path': str(output_path.absolute()),
-        'n_splits': n_splits,
-        'datetime': datetime.now().astimezone().isoformat()}
+        "description": "MIL cross-validation",
+        "clini": str(Path(clini_table).absolute()),
+        "slide": str(Path(slide_csv).absolute()),
+        "feature_dir": str(feature_dir.absolute()),
+        "target_label": str(target_label),
+        "cat_labels": [str(c) for c in cat_labels],
+        "cont_labels": [str(c) for c in cont_labels],
+        "output_path": str(output_path.absolute()),
+        "n_splits": n_splits,
+        "datetime": datetime.now().astimezone().isoformat(),
+    }
 
-    clini_df = pd.read_csv(clini_table, dtype=str) if Path(
-        clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
+    clini_df = (
+        pd.read_csv(clini_table, dtype=str)
+        if Path(clini_table).suffix == ".csv"
+        else pd.read_excel(clini_table, dtype=str)
+    )
     slide_df = pd.read_csv(slide_csv, dtype=str)
-    df = clini_df.merge(slide_df, on='PATIENT')
+    df = clini_df.merge(slide_df, on="PATIENT")
 
     # filter na, infer categories if not given
     df = df.dropna(subset=target_label)
@@ -295,73 +326,86 @@ def categorical_crossval_(
     if not categories:
         categories = df[target_label].unique()
     categories = np.array(categories)
-    info['categories'] = list(categories)
+    info["categories"] = list(categories)
 
-    df = get_cohort_df(clini_table, slide_csv, feature_dir,
-                       target_label, categories)
+    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
-    info['class distribution'] = {'overall': {
-        k: int(v) for k, v in df[target_label].value_counts().items()}}
+    info["class distribution"] = {
+        "overall": {k: int(v) for k, v in df[target_label].value_counts().items()}
+    }
 
     target_enc = OneHotEncoder(sparse=False).fit(categories.reshape(-1, 1))
 
-    if (fold_path := output_path/'folds.pt').exists():
+    if (fold_path := output_path / "folds.pt").exists():
         folds = torch.load(fold_path)
 
-    elif (fixed_folds is not None):
+    elif fixed_folds is not None:
         folds = torch.load(fixed_folds)
-        torch.save(folds, output_path/'folds.pt')
+        torch.save(folds, output_path / "folds.pt")
         print(f"Successfully loaded and saved fixed folds from {fixed_folds}")
 
     else:
         # check the maximum amount of splits that can be made
-        distrib = info['class distribution']['overall']
+        distrib = info["class distribution"]["overall"]
         least_populated_class = min(distrib, key=distrib.get)
         if distrib[least_populated_class] < n_splits:
-            print(f"Warning: Cannot make requested {n_splits} folds due to having \
+            print(
+                f"Warning: Cannot make requested {n_splits} folds due to having \
                  {distrib[least_populated_class]} samples in category '{least_populated_class}', \
-                    reduced to {distrib[least_populated_class]} folds.")
+                    reduced to {distrib[least_populated_class]} folds."
+            )
             n_splits = distrib[least_populated_class]
-            info['n_splits'] = distrib[least_populated_class]
+            info["n_splits"] = distrib[least_populated_class]
 
         # added shuffling with seed 1337
-        skf = StratifiedKFold(
-            n_splits=n_splits, shuffle=True, random_state=1337)
-        patient_df = df.groupby('PATIENT').first().reset_index()
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1337)
+        patient_df = df.groupby("PATIENT").first().reset_index()
         folds = tuple(skf.split(patient_df.PATIENT, patient_df[target_label]))
         torch.save(folds, fold_path)
 
-    info['folds'] = [
+    info["folds"] = [
         {
             part: list(df.PATIENT[folds[fold][i]])
-            for i, part in enumerate(['train', 'test'])
+            for i, part in enumerate(["train", "test"])
         }
-        for fold in range(info['n_splits'])]
+        for fold in range(info["n_splits"])
+    ]
 
-    with open(output_path/'info.json', 'w') as f:
+    with open(output_path / "info.json", "w") as f:
         json.dump(info, f)
 
     for fold, (train_idxs, test_idxs) in enumerate(folds):
-        fold_path = output_path/f'fold-{fold}'
-        if (preds_csv := fold_path/'patient-preds.csv').exists():
-            print(f'{preds_csv} already exists!  Skipping...')
+        fold_path = output_path / f"fold-{fold}"
+        if (preds_csv := fold_path / "patient-preds.csv").exists():
+            print(f"{preds_csv} already exists!  Skipping...")
             continue
-        elif (fold_path/'export.pkl').exists():
-            learn = load_learner(fold_path/'export.pkl')
+        elif (fold_path / "export.pkl").exists():
+            learn = load_learner(fold_path / "export.pkl")
         else:
             fold_train_df = df.iloc[train_idxs]
             learn = _crossval_train(
-                fold_path=fold_path, fold_df=fold_train_df, fold=fold, info=info,
-                target_label=target_label, target_enc=target_enc,
-                cat_labels=cat_labels, cont_labels=cont_labels)
+                fold_path=fold_path,
+                fold_df=fold_train_df,
+                fold=fold,
+                info=info,
+                target_label=target_label,
+                target_enc=target_enc,
+                cat_labels=cat_labels,
+                cont_labels=cont_labels,
+            )
             learn.export()
 
         fold_test_df = df.iloc[test_idxs]
-        fold_test_df.drop(columns='slide_path').to_csv(
-            fold_path/'test.csv', index=False)
+        fold_test_df.drop(columns="slide_path").to_csv(
+            fold_path / "test.csv", index=False
+        )
         patient_preds_df = deploy(
-            test_df=fold_test_df, learn=learn,
-            target_label=target_label, cat_labels=cat_labels, cont_labels=cont_labels)
+            test_df=fold_test_df,
+            learn=learn,
+            target_label=target_label,
+            cat_labels=cat_labels,
+            cont_labels=cont_labels,
+        )
         patient_preds_df.to_csv(preds_csv, index=False)
 
 
@@ -372,37 +416,42 @@ def _crossval_train(
     assert fold_df.PATIENT.nunique() == len(fold_df)
     fold_path.mkdir(exist_ok=True, parents=True)
 
-    info['class distribution'][f'fold {fold}'] = {'overall': {
-        k: int(v) for k, v in fold_df[target_label].value_counts().items()}}
+    info["class distribution"][f"fold {fold}"] = {
+        "overall": {k: int(v) for k, v in fold_df[target_label].value_counts().items()}
+    }
 
     train_patients, valid_patients = train_test_split(
-        fold_df.PATIENT, stratify=fold_df[target_label], random_state=1337)
+        fold_df.PATIENT, stratify=fold_df[target_label], random_state=1337
+    )
     train_df = fold_df[fold_df.PATIENT.isin(train_patients)]
     valid_df = fold_df[fold_df.PATIENT.isin(valid_patients)]
-    train_df.drop(columns='slide_path').to_csv(
-        fold_path/'train.csv', index=False)
-    valid_df.drop(columns='slide_path').to_csv(
-        fold_path/'valid.csv', index=False)
+    train_df.drop(columns="slide_path").to_csv(fold_path / "train.csv", index=False)
+    valid_df.drop(columns="slide_path").to_csv(fold_path / "valid.csv", index=False)
 
-    info['class distribution'][f'fold {fold}']['training'] = {
-        k: int(v) for k, v in train_df[target_label].value_counts().items()}
-    info['class distribution'][f'fold {fold}']['validation'] = {
-        k: int(v) for k, v in valid_df[target_label].value_counts().items()}
+    info["class distribution"][f"fold {fold}"]["training"] = {
+        k: int(v) for k, v in train_df[target_label].value_counts().items()
+    }
+    info["class distribution"][f"fold {fold}"]["validation"] = {
+        k: int(v) for k, v in valid_df[target_label].value_counts().items()
+    }
 
     add_features = []
     if cat_labels:
         add_features.append(
-            (_make_cat_enc(train_df, cat_labels), fold_df[cat_labels].values))
+            (_make_cat_enc(train_df, cat_labels), fold_df[cat_labels].values)
+        )
     if cont_labels:
         add_features.append(
-            (_make_cont_enc(train_df, cont_labels), fold_df[cont_labels].values))
+            (_make_cont_enc(train_df, cont_labels), fold_df[cont_labels].values)
+        )
 
     learn = train(
         bags=fold_df.slide_path.values,
         targets=(target_enc, fold_df[target_label].values),
         add_features=add_features,
         valid_idxs=fold_df.PATIENT.isin(valid_patients),
-        path=fold_path)
+        path=fold_path,
+    )
     learn.target_label = target_label
     learn.cat_labels, learn.cont_labels = cat_labels, cont_labels
 

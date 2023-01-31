@@ -9,8 +9,13 @@ from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 from fastai.vision.all import (
-    Learner, DataLoader, DataLoaders, RocAuc,
-    SaveModelCallback, CSVLogger)
+    Learner,
+    DataLoader,
+    DataLoaders,
+    RocAuc,
+    SaveModelCallback,
+    CSVLogger,
+)
 import pandas as pd
 import numpy as np
 
@@ -20,10 +25,10 @@ from .data import make_dataset
 from .model import MILModel
 
 
-__all__ = ['train', 'deploy']
+__all__ = ["train", "deploy"]
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 def train(
@@ -48,24 +53,24 @@ def train(
     train_ds = make_dataset(
         bags=bags[~valid_idxs],
         targets=(target_enc, targs[~valid_idxs]),
-        add_features=[
-            (enc, vals[~valid_idxs])
-            for enc, vals in add_features],
-        bag_size=512)
+        add_features=[(enc, vals[~valid_idxs]) for enc, vals in add_features],
+        bag_size=512,
+    )
 
     valid_ds = make_dataset(
         bags=bags[valid_idxs],
         targets=(target_enc, targs[valid_idxs]),
-        add_features=[
-            (enc, vals[valid_idxs])
-            for enc, vals in add_features],
-        bag_size=None)
+        add_features=[(enc, vals[valid_idxs]) for enc, vals in add_features],
+        bag_size=None,
+    )
 
     # build dataloaders
     train_dl = DataLoader(
-        train_ds, batch_size=64, shuffle=True, num_workers=1, drop_last=True)
+        train_ds, batch_size=64, shuffle=True, num_workers=1, drop_last=True
+    )
     valid_dl = DataLoader(
-        valid_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count())
+        valid_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count()
+    )
     batch = train_dl.one_batch()
 
     model = MILModel(batch[0].shape[-1], batch[-1].shape[-1])
@@ -76,18 +81,19 @@ def train(
     weight /= weight.sum()
     # reorder according to vocab
     weight = torch.tensor(
-        list(map(weight.get, target_enc.categories_[0])), dtype=torch.float32)
+        list(map(weight.get, target_enc.categories_[0])), dtype=torch.float32
+    )
     loss_func = nn.CrossEntropyLoss(weight=weight)
 
     dls = DataLoaders(train_dl, valid_dl)
-    learn = Learner(dls, model, loss_func=loss_func,
-                    metrics=[RocAuc()], path=path)
+    learn = Learner(dls, model, loss_func=loss_func, metrics=[RocAuc()], path=path)
 
     cbs = [
-        SaveModelCallback(fname=f'best_valid'),
-        #EarlyStoppingCallback(monitor='roc_auc_score',
+        SaveModelCallback(fname=f"best_valid"),
+        # EarlyStoppingCallback(monitor='roc_auc_score',
         #                      min_delta=0.01, patience=patience),
-        CSVLogger()]
+        CSVLogger(),
+    ]
 
     learn.fit_one_cycle(n_epoch=n_epoch, lr_max=1e-4, cbs=cbs)
 
@@ -95,17 +101,23 @@ def train(
 
 
 def deploy(
-    test_df: pd.DataFrame, learn: Learner, *,
+    test_df: pd.DataFrame,
+    learn: Learner,
+    *,
     target_label: Optional[str] = None,
-    cat_labels: Optional[Sequence[str]] = None, cont_labels: Optional[Sequence[str]] = None,
+    cat_labels: Optional[Sequence[str]] = None,
+    cont_labels: Optional[Sequence[str]] = None,
 ) -> pd.DataFrame:
-    assert test_df.PATIENT.nunique() == len(test_df), 'duplicate patients!'
-    #assert (len(add_label)
+    assert test_df.PATIENT.nunique() == len(test_df), "duplicate patients!"
+    # assert (len(add_label)
     #        == (n := len(learn.dls.train.dataset._datasets[-2]._datasets))), \
     #    f'not enough additional feature labels: expected {n}, got {len(add_label)}'
-    if target_label is None: target_label = learn.target_label
-    if cat_labels is None: cat_labels = learn.cat_labels
-    if cont_labels is None: cont_labels = learn.cont_labels
+    if target_label is None:
+        target_label = learn.target_label
+    if cat_labels is None:
+        cat_labels = learn.cat_labels
+    if cont_labels is None:
+        cont_labels = learn.cont_labels
 
     target_enc = learn.dls.dataset._datasets[-1].encode
     categories = target_enc.categories_[0]
@@ -121,39 +133,51 @@ def deploy(
         bags=test_df.slide_path.values,
         targets=(target_enc, test_df[target_label].values),
         add_features=add_features,
-        bag_size=None)
+        bag_size=None,
+    )
 
     test_dl = DataLoader(
-        test_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count())
+        test_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count()
+    )
 
-    #removed softmax in forward, but add here to get 0-1 probabilities
+    # removed softmax in forward, but add here to get 0-1 probabilities
     patient_preds, patient_targs = learn.get_preds(dl=test_dl, act=nn.Softmax(dim=1))
 
     # make into DF w/ ground truth
-    patient_preds_df = pd.DataFrame.from_dict({
-        'PATIENT': test_df.PATIENT.values,
-        target_label: test_df[target_label].values,
-        **{f'{target_label}_{cat}': patient_preds[:, i]
-            for i, cat in enumerate(categories)}})
+    patient_preds_df = pd.DataFrame.from_dict(
+        {
+            "PATIENT": test_df.PATIENT.values,
+            target_label: test_df[target_label].values,
+            **{
+                f"{target_label}_{cat}": patient_preds[:, i]
+                for i, cat in enumerate(categories)
+            },
+        }
+    )
 
     # calculate loss
-    patient_preds = patient_preds_df[[
-        f'{target_label}_{cat}' for cat in categories]].values
+    patient_preds = patient_preds_df[
+        [f"{target_label}_{cat}" for cat in categories]
+    ].values
     patient_targs = target_enc.transform(
-        patient_preds_df[target_label].values.reshape(-1, 1))
-    patient_preds_df['loss'] = F.cross_entropy(
-        torch.tensor(patient_preds), torch.tensor(patient_targs),
-        reduction='none')
+        patient_preds_df[target_label].values.reshape(-1, 1)
+    )
+    patient_preds_df["loss"] = F.cross_entropy(
+        torch.tensor(patient_preds), torch.tensor(patient_targs), reduction="none"
+    )
 
-    patient_preds_df['pred'] = categories[patient_preds.argmax(1)]
+    patient_preds_df["pred"] = categories[patient_preds.argmax(1)]
 
     # reorder dataframe and sort by loss (best predictions first)
-    patient_preds_df = patient_preds_df[[
-        'PATIENT',
-        target_label,
-        'pred',
-        *(f'{target_label}_{cat}' for cat in categories),
-        'loss']]
-    patient_preds_df = patient_preds_df.sort_values(by='loss')
+    patient_preds_df = patient_preds_df[
+        [
+            "PATIENT",
+            target_label,
+            "pred",
+            *(f"{target_label}_{cat}" for cat in categories),
+            "loss",
+        ]
+    ]
+    patient_preds_df = patient_preds_df.sort_values(by="loss")
 
     return patient_preds_df
