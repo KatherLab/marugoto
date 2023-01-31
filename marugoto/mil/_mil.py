@@ -38,7 +38,6 @@ def train(
     add_features: Iterable[Tuple[SKLearnEncoder, Sequence[Any]]] = [],
     valid_idxs: np.ndarray,
     n_epoch: int = 32,
-    patience: int = 16,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
@@ -90,8 +89,6 @@ def train(
 
     cbs = [
         SaveModelCallback(fname=f"best_valid"),
-        # EarlyStoppingCallback(monitor='roc_auc_score',
-        #                      min_delta=0.01, patience=patience),
         CSVLogger(),
     ]
 
@@ -109,9 +106,6 @@ def deploy(
     cont_labels: Optional[Sequence[str]] = None,
 ) -> pd.DataFrame:
     assert test_df.PATIENT.nunique() == len(test_df), "duplicate patients!"
-    # assert (len(add_label)
-    #        == (n := len(learn.dls.train.dataset._datasets[-2]._datasets))), \
-    #    f'not enough additional feature labels: expected {n}, got {len(add_label)}'
     if target_label is None:
         target_label = learn.target_label
     if cat_labels is None:
