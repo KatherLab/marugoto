@@ -29,7 +29,7 @@ def _top_att_tiles_df(
     
     df = mil.data.get_cohort_df(
         clini_table=patient_preds_csv,
-        slide_csv=slide_csv,
+        slide_table=slide_csv,
         feature_dir=feature_dir,
         target_label=target_label,
         categories=[pos_class],

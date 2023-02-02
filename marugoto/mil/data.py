@@ -1,8 +1,10 @@
 from dataclasses import dataclass
-from typing import Any, Iterable, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Iterable, Optional, Tuple
 from pathlib import Path
 
 import h5py
+import numpy as np
 import numpy.typing as npt
 import pandas as pd
 import torch
@@ -169,18 +171,24 @@ def _attach_add_to_bag_and_zip_with_targ(bag, add, targ):
 
 def get_cohort_df(
     clini_table: Path,
-    slide_csv: Path,
+    slide_table: Path,
     feature_dir: Path,
     target_label: str,
-    categories: Iterable[str],
-) -> pd.DataFrame:
+    categories: Optional[npt.NDArray[np.str_]],
+) -> Tuple[pd.DataFrame, npt.NDArray[np.str_]]:
     clini_df = (
         pd.read_csv(clini_table, dtype=str)
         if Path(clini_table).suffix == ".csv"
         else pd.read_excel(clini_table, dtype=str)
     )
-    slide_df = pd.read_csv(slide_csv, dtype=str)
+    slide_df = pd.read_csv(slide_table, dtype=str)
     df = clini_df.merge(slide_df, on="PATIENT")
+    assert not df.empty, "no overlap between clini and slide table."
+
+    # infer categories if not given
+    if categories is None:
+        categories = df.dropna(subset=target_label)[target_label].unique()
+    assert len(categories) >= 2, f"fewer than two categories found: {categories=}"
 
     # remove uninteresting
     df = df[df[target_label].isin(categories)]
@@ -190,6 +198,9 @@ def get_cohort_df(
     h5_df = pd.DataFrame(h5s, columns=["slide_path"])
     h5_df["FILENAME"] = h5_df.slide_path.map(lambda p: p.stem)
     df = df.merge(h5_df, on="FILENAME")
+    assert (
+        not df.empty
+    ), "clini and slide table match, but no corrensponding features have been found."
 
     # reduce to one row per patient with list of slides in `df['slide_path']`
     patient_df = df.groupby("PATIENT").first().drop(columns="slide_path")
@@ -198,4 +209,4 @@ def get_cohort_df(
         patient_slides, left_on="PATIENT", right_index=True
     ).reset_index()
 
-    return df
+    return df, np.array(categories)

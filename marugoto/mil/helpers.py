@@ -2,8 +2,10 @@ from datetime import datetime
 import json
 from pathlib import Path
 from typing import Iterable, Optional, Sequence, Union, Dict, Any
+from warnings import warn
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import StratifiedKFold, train_test_split
@@ -37,7 +39,7 @@ def train_categorical_model_(
     target_label: str,
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
-    categories: Optional[Iterable[str]] = None,
+    categories: Optional[npt.NDArray] = None,
 ) -> None:
     """Train a categorical model on a cohort's tile's features.
 
@@ -50,6 +52,11 @@ def train_categorical_model_(
         feature_dir:  Path containing the features.
         output_path:  File to save model in.
     """
+    warn(
+        "this interface is deprecated and will be removed in the future.  "
+        "For training from the command line, please use `marugoto.mil.train`.",
+        FutureWarning,
+    )
     feature_dir = Path(feature_dir)
     output_path = Path(output_path)
     output_path.mkdir(exist_ok=True, parents=True)
@@ -73,31 +80,14 @@ def train_categorical_model_(
         print(f"{model_path} already exists. Skipping...")
         return
 
-    clini_df = (
-        pd.read_csv(clini_table, dtype=str)
-        if Path(clini_table).suffix == ".csv"
-        else pd.read_excel(clini_table, dtype=str)
+    df, categories = get_cohort_df(
+        clini_table, slide_csv, feature_dir, target_label, categories
     )
-    slide_df = pd.read_csv(slide_csv, dtype=str)
-    df = clini_df.merge(slide_df, on="PATIENT")
-
-    # filter na, infer categories if not given
-    df = df.dropna(subset=target_label)
-
-    # TODO move into get_cohort_df
-    if not categories:
-        categories = df[target_label].unique()
-    categories = np.array(categories)
-    info["categories"] = list(categories)
-
-    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
     print("Overall distribution")
     print(df[target_label].value_counts())
-    assert df[
-        target_label
-    ].empty, "no input dataset. Do the tables / feature dir belong to the same cohorts?"
 
+    info["categories"] = list(categories)
     info["class distribution"] = {
         "overall": {k: int(v) for k, v in df[target_label].value_counts().items()}
     }
@@ -187,7 +177,7 @@ def train_categorical_model_(
     patient_preds_df.to_csv(output_path / "patient-preds-validset.csv", index=False)
 
 
-def _make_cat_enc(df, cats) -> SKLearnEncoder:
+def _make_cat_enc(df: pd.DataFrame, cats: Iterable[str]) -> SKLearnEncoder:
     # create a scaled one-hot encoder for the categorical values
     #
     # due to weirdeties in sklearn's OneHotEncoder.fit we fill NAs with other values
