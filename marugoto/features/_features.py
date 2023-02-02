@@ -81,8 +81,8 @@ class H5TileDataset(Dataset):
         )
         # assert not self.seed or self.tile_no, \
         #    '`seed` must not be set if `tile_no` is `None`.'
-        with h5py.File(self.h5path, mode='r') as f:
-            if not self.tile_no:
+        if not self.tile_no:
+            with h5py.File(self.h5path, mode='r') as f:
                 self.tile_no = len(f['feats'])
 
     def __getitem__(self, index) -> torch.Tensor:
@@ -110,12 +110,16 @@ def add_coordinates(tile_score_slide_df):
     pat_list = tile_score_slide_df.PATIENT.unique()
     for patient in pat_list:
         df_patient = tile_score_slide_df[tile_score_slide_df.PATIENT == patient].copy()
-        slide_path = df_patient.slide_path[0]
+        slide_path = df_patient.slide_path.iloc[0]
         with h5py.File(slide_path, mode='r') as f:
-            coords = np.array(f.get('coords'))
-            df_patient['x'] = coords[:, 0]
-            df_patient['y'] = coords[:, 1]
-            f.close()
+            try:
+                coords = np.array(f.get('coords'))
+                df_patient['x'] = coords[:, 0]
+                df_patient['y'] = coords[:, 1]
+            except ValueError:
+                df_patient['x'] = None
+                df_patient['y'] = None
+                continue
         df_patient.drop(['slide_path'], axis=1, inplace=True)
 
         if tile_score_slide_coords_df.empty:
@@ -124,7 +128,8 @@ def add_coordinates(tile_score_slide_df):
             tile_score_slide_coords_df = pd.concat(
                 [tile_score_slide_coords_df, df_patient], axis=0)
 
-        return tile_score_slide_coords_df
+    return tile_score_slide_coords_df
+
 
 def train(
     *,
@@ -136,8 +141,8 @@ def train(
     valid_df,
     target_label,
     n_epoch: int = 32,
-    patience: int = 1,
-    tile_no=None,
+    patience: int = 8,
+    tile_no = None,
     path: Optional[Path] = None,
 ) -> Learner:
     """Train a MLP on image features.
@@ -201,7 +206,8 @@ def train(
 
     tile_score_slide_df = pd.merge(
         tile_score_df, valid_df[['PATIENT', 'slide_path']], on='PATIENT')
-    tile_score_slide_coords_df = add_coordinates(tile_score_slide_df)
+    if not tile_no:
+        tile_score_slide_coords_df = add_coordinates(tile_score_slide_df)
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
     patient_preds_df = patient_preds_df.merge(
@@ -258,7 +264,9 @@ def deploy(test_df, learn, target_label, tile_no=None):
 
     tile_score_slide_df = pd.merge(
         tile_score_df, test_df[['PATIENT', 'slide_path']], on='PATIENT')
-    tile_score_slide_coords_df = add_coordinates(tile_score_slide_df)
+    #print(tile_score_slide_df.head())
+    if not tile_no:
+        tile_score_slide_coords_df = add_coordinates(tile_score_slide_df)
     # calculate mean patient score, merge with ground truth label
     patient_preds_df = tile_score_df.groupby('PATIENT').mean().reset_index()
     patient_preds_df = patient_preds_df.merge(
