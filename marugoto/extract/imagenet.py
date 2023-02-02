@@ -2,24 +2,34 @@
 import argparse
 from pathlib import Path
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Extract Resnet18 imagenet features from slide.')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Extract Resnet18 imagenet features from slide."
+    )
     parser.add_argument(
-        'slide_tile_paths', metavar='SLIDE_TILE_DIR', type=Path, nargs='+',
-        help='A directory with tiles from a slide.')
+        "slide_tile_paths",
+        metavar="SLIDE_TILE_DIR",
+        type=Path,
+        nargs="+",
+        help="A directory with tiles from a slide.",
+    )
     parser.add_argument(
-        '-o', '--outdir', type=Path, required=True, help='Path to save the features to.')
+        "-o", "--outdir", type=Path, required=True, help="Path to save the features to."
+    )
     parser.add_argument(
-        '--augmented-repetitions', type=int, default=0,
-        help='Also save augmented feature vectors.')
+        "--augmented-repetitions",
+        type=int,
+        default=0,
+        help="Also save augmented feature vectors.",
+    )
     args = parser.parse_args()
-    print(f'{args=}')
+    print(f"{args=}")
 
 import torchvision
 import torch
 from .extract import extract_features_
 
-__all__ = ['extract_resnet18_imagenet_features']
+__all__ = ["extract_resnet18_imagenet_features"]
 
 
 def extract_resnet18_imagenet_features_(slide_tile_paths, **kwargs):
@@ -35,11 +45,16 @@ def extract_resnet18_imagenet_features_(slide_tile_paths, **kwargs):
     """
     model = torchvision.models.resnet18(pretrained=True)
     model.fc = torch.nn.Identity()
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     model = model.eval().to(device)
 
-    return extract_features_(slide_tile_paths=slide_tile_paths, model=model, model_name='resnet18-imagenet', **kwargs)
+    return extract_features_(
+        slide_tile_paths=slide_tile_paths,
+        model=model,
+        model_name="resnet18-imagenet",
+        **kwargs,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     extract_resnet18_imagenet_features_(**vars(args))
