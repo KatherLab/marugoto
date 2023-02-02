@@ -226,6 +226,11 @@ def deploy_categorical_model_(
         model_path:  Path of the model to deploy.
         output_path:  File to save model in.
     """
+    warn(
+        "this interface is deprecated and will be removed in the future.  "
+        "For training from the command line, please use `marugoto.mil.deploy`.",
+        FutureWarning,
+    )
     feature_dir = Path(feature_dir)
     model_path = Path(model_path)
     output_path = Path(output_path)
