@@ -29,6 +29,7 @@ def train_categorical_model_(
     target_label: str,
     output_path: PathLike,
     categories: Optional[Iterable[str]] = None,
+    tile_no=None,
 ) -> None:
     """Train a categorical model on a cohort's tile's features.
 
@@ -115,21 +116,34 @@ def train_categorical_model_(
 
     with open(output_path / "info.json", "w") as f:
         json.dump(info, f)
-
-    learn, patient_preds_df, tile_score_slide_df = train(
-        target_enc=target_enc,
-        train_bags=train_df.slide_path.values,
-        train_targets=train_df[target_label].values,
-        valid_bags=valid_df.slide_path.values,
-        valid_targets=valid_df[target_label].values,
-        valid_df=valid_df,
-        target_label=target_label,
-        path=output_path,
-    )
-
+    if not tile_no:
+        learn, patient_preds_df, tile_score_slide_df = train(
+            target_enc=target_enc,
+            train_bags=train_df.slide_path.values,
+            train_targets=train_df[target_label].values,
+            valid_bags=valid_df.slide_path.values,
+            valid_targets=valid_df[target_label].values,
+            valid_df=valid_df,
+            target_label=target_label,
+            path=output_path,
+            tile_no=tile_no,
+        )
+        tile_score_slide_df.to_csv(output_path / "tile-preds-validset.csv")
+    else:
+        learn, patient_preds_df = train(
+            target_enc=target_enc,
+            train_bags=train_df.slide_path.values,
+            train_targets=train_df[target_label].values,
+            valid_bags=valid_df.slide_path.values,
+            valid_targets=valid_df[target_label].values,
+            valid_df=valid_df,
+            target_label=target_label,
+            path=output_path,
+            tile_no=tile_no,
+        )
     learn.export()
     patient_preds_df.to_csv(output_path / "patient-preds-validset.csv")
-    tile_score_slide_df.to_csv(output_path / "tile-preds-validset.csv")
+    
 
 
 def deploy_categorical_model_(

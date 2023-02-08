@@ -257,8 +257,10 @@ def train(
     ]
     patient_preds_df = patient_preds_df.sort_values(by="loss")
     patient_preds_df
-    return learn, patient_preds_df, tile_score_slide_coords_df
-
+    if not tile_no:
+        return learn, patient_preds_df, tile_score_slide_coords_df
+    else:
+        return learn, patient_preds_df
 
 def deploy(test_df, learn, target_label, tile_no=None):
     warn(
