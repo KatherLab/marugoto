@@ -143,7 +143,6 @@ def train_categorical_model_(
         )
     learn.export()
     patient_preds_df.to_csv(output_path / "patient-preds-validset.csv")
-    
 
 
 def deploy_categorical_model_(
@@ -153,6 +152,7 @@ def deploy_categorical_model_(
     target_label: str,
     model_path: PathLike,
     output_path: PathLike,
+    tile_no: int = None,
 ) -> None:
     """Deploy a categorical model on a cohort's tile's features.
 
@@ -167,6 +167,7 @@ def deploy_categorical_model_(
     feature_dir = Path(feature_dir)
     model_path = Path(model_path)
     output_path = Path(output_path)
+    output_path.mkdir(parents=True, exist_ok=True)
     if (preds_csv := output_path / "patient-preds.csv").exists():
         print(f"{preds_csv} already exists!  Skipping...")
         return
@@ -190,13 +191,19 @@ def deploy_categorical_model_(
     slide_df = pd.DataFrame(slides, columns=["slide_path"])
     slide_df["FILENAME"] = slide_df.slide_path.map(lambda p: p.stem)
     test_df = test_df.merge(slide_df, on="FILENAME")
-
-    patient_preds_df, tile_preds_df = deploy(
-        test_df=test_df, learn=learn, target_label=target_label
-    )
-    output_path.mkdir(parents=True, exist_ok=True)
+    if not tile_no:
+        patient_preds_df, tile_preds_df = deploy(
+            test_df=test_df, learn=learn, target_label=target_label
+        )
+        tile_preds_df.to_csv(output_path / "tile-preds.csv", index=False)
+    else:
+        patient_preds_df = deploy(
+            test_df=test_df, learn=learn, target_label=target_label, tile_no=tile_no
+        )
+        print(type(patient_preds_df))
+        print(patient_preds_df)
+    
     patient_preds_df.to_csv(preds_csv, index=False)
-    tile_preds_df.to_csv(output_path / "tile-preds.csv", index=False)
 
 
 def categorical_crossval_(

@@ -25,8 +25,8 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \
-        --output-path output/path
-        --tile_no 256 (optional)
+        --output-path output/path \
+        (optional) --tile_no 256
 
 ### Deploy a Model on Another Cohort ###
 
@@ -36,8 +36,8 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \
         --model-path training-dir/export.pkl \
-        --output-path output/path
-        --tile_no 256 (optional)
+        --output-path output/path \
+        (optional) --tile_no 256 (optional)
 
 ### Cross-Validate a Model ###
 
