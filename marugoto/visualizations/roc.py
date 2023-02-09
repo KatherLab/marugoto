@@ -276,7 +276,7 @@ if __name__ == "__main__":
         type=str,
         action="append",
         help=(
-            "A subgroup to include in the ouput.  "
+            "A subgroup to include in the output.  "
             "If none are given, a ROC curve for each of the subgroups will be created."
         ),
     )
