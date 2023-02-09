@@ -265,7 +265,7 @@ def train(
     if not tile_no:
         return learn, patient_preds_df, tile_score_slide_coords_df
     else:
-        return learn, patient_preds_df
+        return learn, patient_preds_df, tile_score_slide_df
 
 
 def deploy(test_df, learn, target_label, tile_no: int = None):
@@ -342,4 +342,4 @@ def deploy(test_df, learn, target_label, tile_no: int = None):
         return patient_preds_df, tile_score_slide_coords_df
     
     else:
-        return patient_preds_df
+        return patient_preds_df, tile_score_slide_df

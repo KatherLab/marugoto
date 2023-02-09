@@ -116,33 +116,22 @@ def train_categorical_model_(
 
     with open(output_path / "info.json", "w") as f:
         json.dump(info, f)
-    if not tile_no:
-        learn, patient_preds_df, tile_score_slide_df = train(
-            target_enc=target_enc,
-            train_bags=train_df.slide_path.values,
-            train_targets=train_df[target_label].values,
-            valid_bags=valid_df.slide_path.values,
-            valid_targets=valid_df[target_label].values,
-            valid_df=valid_df,
-            target_label=target_label,
-            path=output_path,
-            tile_no=tile_no,
-        )
-        tile_score_slide_df.to_csv(output_path / "tile-preds-validset.csv")
-    else:
-        learn, patient_preds_df = train(
-            target_enc=target_enc,
-            train_bags=train_df.slide_path.values,
-            train_targets=train_df[target_label].values,
-            valid_bags=valid_df.slide_path.values,
-            valid_targets=valid_df[target_label].values,
-            valid_df=valid_df,
-            target_label=target_label,
-            path=output_path,
-            tile_no=tile_no,
-        )
+    
+    learn, patient_preds_df, tile_scores_df = train(
+        target_enc=target_enc,
+        train_bags=train_df.slide_path.values,
+        train_targets=train_df[target_label].values,
+        valid_bags=valid_df.slide_path.values,
+        valid_targets=valid_df[target_label].values,
+        valid_df=valid_df,
+        target_label=target_label,
+        path=output_path,
+        tile_no=tile_no,
+    )
+  
     learn.export()
     patient_preds_df.to_csv(output_path / "patient-preds-validset.csv")
+    tile_scores_df.to_csv(output_path / "tile-preds-validset.csv")
 
 
 def deploy_categorical_model_(
@@ -191,20 +180,13 @@ def deploy_categorical_model_(
     slide_df = pd.DataFrame(slides, columns=["slide_path"])
     slide_df["FILENAME"] = slide_df.slide_path.map(lambda p: p.stem)
     test_df = test_df.merge(slide_df, on="FILENAME")
-    if not tile_no:
-        patient_preds_df, tile_preds_df = deploy(
-            test_df=test_df, learn=learn, target_label=target_label
-        )
-        tile_preds_df.to_csv(output_path / "tile-preds.csv", index=False)
-    else:
-        patient_preds_df = deploy(
-            test_df=test_df, learn=learn, target_label=target_label, tile_no=tile_no
-        )
-        print(type(patient_preds_df))
-        print(patient_preds_df)
     
-    patient_preds_df.to_csv(preds_csv, index=False)
+    patient_preds_df, tile_preds_df = deploy(
+        test_df=test_df, learn=learn, target_label=target_label, tile_no=tile_no
+    )
 
+    patient_preds_df.to_csv(preds_csv, index=False)
+    tile_preds_df.to_csv(output_path / "tile-preds.csv", index=False)
 
 def categorical_crossval_(
     clini_excel: PathLike,
