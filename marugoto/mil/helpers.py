@@ -65,7 +65,7 @@ def train_categorical_model_(
         'output_path': str(output_path.absolute()),
         'datetime': datetime.now().astimezone().isoformat()}
 
-   model_path = output_path/'export.pkl'
+    model_path = output_path/'export.pkl'
     if model_path.exists():
         print(f'{model_path} already exists. Skipping...')
         return
