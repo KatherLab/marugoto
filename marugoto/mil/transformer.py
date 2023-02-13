@@ -92,7 +92,7 @@ class Transformer(nn.Module):
         self.layer2 = TransformerLayer(dim=512, heads=8, use_ff=False, use_norm=True)
         self._fc2 = nn.Linear(512, self.n_classes, bias=True)
 
-    def forward(self, x):
+    def forward(self, x,_):
 
         h = x
         h = self._fc1(h)
