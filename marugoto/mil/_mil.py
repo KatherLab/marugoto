@@ -16,6 +16,7 @@ from marugoto.data import SKLearnEncoder
 
 from .data import make_dataset
 from .transformer import Transformer
+from .ViT import ViT
 
 
 __all__ = ['train', 'deploy']
@@ -67,8 +68,8 @@ def train(
     batch = train_dl.one_batch()
 
     # for binary classification num_classes=2 for same output dim as normal MILModel
-    model = Transformer(num_classes=2)
-    model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+    model = ViT(num_classes=2) # Transformer(num_classes=2)
+    model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu')) #
 
     # weigh inversely to class occurances
     counts = pd.value_counts(targs[~valid_idxs])
@@ -79,7 +80,7 @@ def train(
         list(map(weight.get, target_enc.categories_[0])), dtype=torch.float32)
     loss_func = nn.CrossEntropyLoss(weight=weight)
 
-    dls = DataLoaders(train_dl, valid_dl, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+    dls = DataLoaders(train_dl, valid_dl, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')) #
     learn = Learner(dls, model, loss_func=loss_func,
                     metrics=[RocAuc()], path=path)
 
