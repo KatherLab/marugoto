@@ -131,7 +131,7 @@ def add_coordinates(tile_score_slide_df):
                 df_patient["x"] = None
                 df_patient["y"] = None
                 continue
-        df_patient.drop(["slide_path"], axis=1, inplace=True)
+        #df_patient.drop(["slide_path"], axis=1, inplace=True)
 
         if tile_score_slide_coords_df.empty:
             tile_score_slide_coords_df = df_patient
