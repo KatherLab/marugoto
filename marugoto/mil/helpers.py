@@ -247,7 +247,7 @@ def deploy_categorical_model_(
     cat_labels = cat_labels or learn.cat_labels
     cont_labels = cont_labels or learn.cont_labels
 
-    test_df = get_cohort_df(
+    test_df, _ = get_cohort_df(
         clini_table, slide_csv, feature_dir, target_label, categories
     )
     patient_preds_df = deploy(test_df=test_df, learn=learn, target_label=target_label)
@@ -317,7 +317,7 @@ def categorical_crossval_(
     categories = np.array(categories)
     info["categories"] = list(categories)
 
-    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
+    df, _ = get_cohort_df(clini_table, slide_csv, feature_dir, target_label, categories)
 
     info["class distribution"] = {
         "overall": {k: int(v) for k, v in df[target_label].value_counts().items()}
