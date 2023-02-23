@@ -95,8 +95,8 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --outpath output/path \
         --target-label isMSIH \
         --true-label MSIH \
-        (optional: subgroup analysis) --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
-        (optional: subgroup analysis) --subgroup-label 'PRETREATED'
+        --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \ (optional: subgroup analysis) 
+        --subgroup-label 'PRETREATED' (optional: subgroup analysis) 
 
 ## Plot Precision Recall Curve ##
 
