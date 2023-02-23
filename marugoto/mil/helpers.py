@@ -238,7 +238,11 @@ def deploy_categorical_model_(
         print(f"{preds_csv} already exists!  Skipping...")
         return
 
+    # load model for deployment
     learn = load_learner(model_path)
+    # set metrics to [] so that external deployment also works if classes of one target are missing/not in the external cohort
+    learn.metrics = []
+
     target_enc = get_target_enc(learn)
 
     categories = target_enc.categories_[0]
