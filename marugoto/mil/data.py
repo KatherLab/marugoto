@@ -1,7 +1,6 @@
 from dataclasses import dataclass
-from collections.abc import Sequence
-from typing import Any, Iterable, Optional, Tuple
 from pathlib import Path
+from typing import Any, Iterable, Optional, Sequence, Tuple
 
 import h5py
 import numpy as np
@@ -11,7 +10,6 @@ import torch
 from torch.utils.data import Dataset
 
 from marugoto.data import EncodedDataset, MapDataset, SKLearnEncoder
-
 
 __all__ = ["BagDataset", "make_dataset", "get_cohort_df"]
 
