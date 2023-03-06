@@ -181,7 +181,9 @@ def deploy_categorical_model_(
         print(f'{preds_csv} already exists!  Skipping...')
         return
 
-    learn = load_learner(model_path)
+    learn = load_learner(model_path, cpu=False)
+
+    learn.metrics = []
     target_enc = get_target_enc(learn)
     categories = target_enc.categories_[0]
 

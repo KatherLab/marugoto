@@ -4,10 +4,11 @@ from pathlib import Path
 import os
 
 import torch
+import functools
 from torch import nn
 import torch.nn.functional as F
 from fastai.vision.all import (
-    Learner, DataLoader, DataLoaders, RocAuc,
+    Learner, DataLoader, DataLoaders, RocAuc, OptimWrapper,
     SaveModelCallback, CSVLogger)
 import pandas as pd
 import numpy as np
@@ -31,7 +32,7 @@ def train(
     targets: Tuple[SKLearnEncoder, np.ndarray],
     add_features: Iterable[Tuple[SKLearnEncoder, Sequence[Any]]] = [],
     valid_idxs: np.ndarray,
-    n_epoch: int = 32,
+    n_epoch: int = 32,#8
     patience: int = 16,
     path: Optional[Path] = None,
 ) -> Learner:
@@ -78,10 +79,19 @@ def train(
     # reorder according to vocab
     weight = torch.tensor(
         list(map(weight.get, target_enc.categories_[0])), dtype=torch.float32)
-    loss_func = nn.CrossEntropyLoss(weight=weight)
+    
+    loss_func = nn.CrossEntropyLoss(weight=weight) #weighted
 
-    dls = DataLoaders(train_dl, valid_dl, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')) #
-    learn = Learner(dls, model, loss_func=loss_func,
+    dls = DataLoaders(train_dl, valid_dl, device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+    # --------------------------------------------1
+    # optimizer from Wagner et al.: AdamW optimizer, only 8 epochs, 2e-5 learning rate and weight decay
+    
+    # AdamW instead of standard Adam 
+    fcn=torch.optim.AdamW
+    optimizer = functools.partial(OptimWrapper, opt=fcn)
+    opt_func = functools.partial(optimizer, lr=2e-5, weight_decay=0.01) 
+
+    learn = Learner(dls, model, loss_func=loss_func, opt_func=opt_func,
                     metrics=[RocAuc()], path=path)
 
     cbs = [
@@ -90,8 +100,22 @@ def train(
         #                      min_delta=0.01, patience=patience),
         CSVLogger()]
 
-    learn.fit_one_cycle(n_epoch=n_epoch, lr_max=1e-4, cbs=cbs)
+    learn.fit_one_cycle(n_epoch=n_epoch, cbs=cbs)
+    # --------------------------------------------1
+    # --------------------------------------------2
+    # \ marugoto version
+ 
+    # learn = Learner(dls, model, loss_func=loss_func,
+    #                 metrics=[RocAuc()], path=path)
 
+    # cbs = [
+    #     SaveModelCallback(fname=f'best_valid'),
+    #     #EarlyStoppingCallback(monitor='roc_auc_score',
+    #     #                      min_delta=0.01, patience=patience),
+    #     CSVLogger()]
+
+    # learn.fit_one_cycle(n_epoch=n_epoch, lr_max=1e-4, cbs=cbs)
+    # --------------------------------------------2
     return learn
 
 
