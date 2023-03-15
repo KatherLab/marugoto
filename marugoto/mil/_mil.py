@@ -89,7 +89,7 @@ def train(
     # AdamW instead of standard Adam 
     fcn=torch.optim.AdamW
     optimizer = functools.partial(OptimWrapper, opt=fcn)
-    opt_func = functools.partial(optimizer, lr=2e-5, weight_decay=0.01) 
+    opt_func = functools.partial(optimizer, lr=2e-5, weight_decay=2e-5) 
 
     learn = Learner(dls, model, loss_func=loss_func, opt_func=opt_func,
                     metrics=[RocAuc()], path=path)
