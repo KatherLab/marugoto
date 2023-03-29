@@ -189,8 +189,7 @@ def categorical_crossval_(
     binary_label: Optional[str] = None,
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
-    n_splits: int = 5,
-    categories: Optional[Iterable[str]] = None,
+    n_splits: int = 5
 ) -> None:
     """Performs a cross-validation for a categorical target.
 
@@ -220,8 +219,7 @@ def categorical_crossval_(
         'cont_labels': [str(c) for c in cont_labels],
         'output_path': str(output_path.absolute()),
         'n_splits': n_splits,
-        'datetime': datetime.now().astimezone().isoformat(),
-        'categories': list(categories)}
+        'datetime': datetime.now().astimezone().isoformat()}
 
     clini_df = pd.read_csv(clini_excel, dtype=str) if Path(clini_excel).suffix == '.csv' else pd.read_excel(clini_excel, dtype=str)
     clini_df = clini_df.astype({target_label: 'float32'})
