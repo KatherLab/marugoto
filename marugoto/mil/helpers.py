@@ -40,6 +40,8 @@ def train_categorical_model_(
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
     categories: Optional[npt.NDArray] = None,
+    drop_last: Optional[bool] = False,
+    batch_size: Optional[int] = 64,
 ) -> None:
     """Train a categorical model on a cohort's tile's features.
 
@@ -122,13 +124,15 @@ def train_categorical_model_(
         add_features.append(
             (_make_cont_enc(train_df, cont_labels), df[cont_labels].values)
         )
-
+        
     learn = train(
         bags=df.slide_path.values,
         targets=(target_enc, df[target_label].values),
         add_features=add_features,
         valid_idxs=df.PATIENT.isin(valid_patients).values,
-        path=output_path,
+        path=output_path, 
+        drop_last=drop_last,
+        batch_size=batch_size,
     )
 
     # save some additional information to the learner to make deployment easier

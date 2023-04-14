@@ -40,6 +40,8 @@ def train(
     valid_idxs: npt.NDArray[np.int_],
     n_epoch: int = 32,
     path: Optional[Path] = None,
+    drop_last: Optional[bool] = False,
+    batch_size: Optional[int] = 64,
 ) -> Learner:
     """Train a MLP on image features.
 
@@ -50,6 +52,7 @@ def train(
         valid_idxs:  Indices of the datasets to use for validation.
     """
     target_enc, targs = targets
+
     train_ds = make_dataset(
         bags=bags[~valid_idxs],  # type: ignore  # arrays cannot be used a slices yet
         targets=(target_enc, targs[~valid_idxs]),
@@ -65,9 +68,15 @@ def train(
     )
 
     # build dataloaders
-    train_dl = DataLoader(
-        train_ds, batch_size=64, shuffle=True, num_workers=1, drop_last=True
-    )
+    if drop_last:
+        assert len(train_ds)<=batch_size, f"Error: batch size ({batch_size}) is higher than data set length ({len(train_ds)})!!" 
+        train_dl = DataLoader(
+            train_ds, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True
+        )
+    else:
+        train_dl = DataLoader(
+            train_ds, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=False
+        )
     valid_dl = DataLoader(
         valid_ds, batch_size=1, shuffle=False, num_workers=os.cpu_count()
     )
