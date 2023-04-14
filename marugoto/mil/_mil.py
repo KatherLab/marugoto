@@ -50,7 +50,7 @@ def train(
         add_features:  An (encoder, targets) pair for each additional input.
         valid_idxs:  Indices of the datasets to use for validation.
         n_epoch: Number of training epochs.
-        path (optional): Path of the learner.
+        path (optional): File location to save model in.
         batch_size (optional): Batch size for the training data loader
         
     """

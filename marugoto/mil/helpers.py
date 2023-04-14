@@ -51,7 +51,7 @@ def train_categorical_model_(
         categories:  Categories to train for, or all categories appearing in the
             clini table if none given (e.g. '["MSIH", "nonMSIH"]').
         feature_dir:  Path containing the features.
-        output_path:  File to save model in.
+        output_path:  File location to save model in.
         batch_size: Batch size for training dataloader (Default is 64).
     """
     warn(
