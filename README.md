@@ -60,6 +60,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
         --target-label isMSIH \
         --output-path output/path
+        (optional) --batch-size 64
 
 ### Deploy a Model on Another Cohort ###
 
@@ -80,6 +81,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --target-label isMSIH \
         --output-path output/path \
         --n-splits 5
+        (optional) --batch-size 64
 
 ## Calculate Statistics for Categorical Deployments ##
 
