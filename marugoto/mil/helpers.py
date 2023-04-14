@@ -40,7 +40,7 @@ def train_categorical_model_(
     cat_labels: Sequence[str] = [],
     cont_labels: Sequence[str] = [],
     categories: Optional[npt.NDArray] = None,
-    drop_last: Optional[bool] = False,
+    drop_last: Optional[bool] = True,
     batch_size: Optional[int] = 64,
 ) -> None:
     """Train a categorical model on a cohort's tile's features.
@@ -276,6 +276,8 @@ def categorical_crossval_(
     # added option to use fixed folds from previous experiment
     fixed_folds: Optional[Path] = None,
     categories: Optional[Iterable[str]] = None,
+    drop_last: Optional[bool] = True,
+    batch_size: Optional[int] = 64,
 ) -> None:
     """Performs a cross-validation for a categorical target.
 
@@ -389,6 +391,8 @@ def categorical_crossval_(
                 target_enc=target_enc,
                 cat_labels=cat_labels,
                 cont_labels=cont_labels,
+                drop_last=drop_last,
+                batch_size=batch_size,
             )
             learn.export()
 
@@ -407,7 +411,8 @@ def categorical_crossval_(
 
 
 def _crossval_train(
-    *, fold_path, fold_df, fold, info, target_label, target_enc, cat_labels, cont_labels
+    *, fold_path, fold_df, fold, info, target_label, target_enc, cat_labels, cont_labels, 
+    drop_last, batch_size,
 ):
     """Helper function for training the folds."""
     assert fold_df.PATIENT.nunique() == len(fold_df)
@@ -448,6 +453,8 @@ def _crossval_train(
         add_features=add_features,
         valid_idxs=fold_df.PATIENT.isin(valid_patients),
         path=fold_path,
+        drop_last=drop_last,
+        batch_size=batch_size,
     )
     learn.target_label = target_label
     learn.cat_labels, learn.cont_labels = cat_labels, cont_labels

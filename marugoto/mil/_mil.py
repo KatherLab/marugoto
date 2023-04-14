@@ -40,7 +40,7 @@ def train(
     valid_idxs: npt.NDArray[np.int_],
     n_epoch: int = 32,
     path: Optional[Path] = None,
-    drop_last: Optional[bool] = False,
+    drop_last: Optional[bool] = True,
     batch_size: Optional[int] = 64,
 ) -> Learner:
     """Train a MLP on image features.
@@ -69,7 +69,7 @@ def train(
 
     # build dataloaders
     if drop_last:
-        assert len(train_ds)<=batch_size, f"Error: batch size ({batch_size}) is higher than data set length ({len(train_ds)})!!" 
+        assert len(train_ds)>=batch_size, f"batch size ({batch_size}) is higher than data set length ({len(train_ds)})!!" 
         train_dl = DataLoader(
             train_ds, batch_size=batch_size, shuffle=True, num_workers=1, drop_last=True
         )
