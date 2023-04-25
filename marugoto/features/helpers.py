@@ -335,6 +335,8 @@ def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc)
         train_targets=train_df[target_label].values,
         valid_bags=valid_df.slide_path.values,
         valid_targets=valid_df[target_label].values,
+        valid_df=valid_df,
+        target_label=target_label,
         path=fold_path,
     )
 
