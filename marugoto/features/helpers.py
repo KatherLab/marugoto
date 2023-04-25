@@ -189,7 +189,7 @@ def deploy_categorical_model_(
     tile_preds_df.to_csv(output_path / "tile-preds.csv", index=False)
 
 def categorical_crossval_(
-    clini_excel: PathLike,
+    clini_table: PathLike,
     slide_csv: PathLike,
     feature_dir: PathLike,
     target_label: str,
@@ -200,7 +200,7 @@ def categorical_crossval_(
     """Performs a cross-validation for a categorical target.
 
     Args:
-        clini_excel:  Path to the clini table.
+        clini_table:  Path to the clini table.
         slide_csv:  Path to the slide tabel.
         feature_dir:  Path containing the features.
         target_label:  Label to train for.
@@ -217,7 +217,7 @@ def categorical_crossval_(
     # not used during actual training
     info = {
         "description": "cross-validation on tile features",
-        "clini": str(Path(clini_excel).absolute()),
+        "clini": str(Path(clini_table).absolute()),
         "slide": str(Path(slide_csv).absolute()),
         "feature_dir": str(feature_dir.absolute()),
         "target_label": str(target_label),
@@ -226,7 +226,11 @@ def categorical_crossval_(
         "datetime": datetime.now().astimezone().isoformat(),
     }
 
-    clini_df = pd.read_excel(clini_excel, dtype=str)
+    clini_df = (
+        pd.read_csv(clini_table, dtype=str)
+        if Path(clini_table).suffix == ".csv"
+        else pd.read_excel(clini_table, dtype=str)
+    )
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on="PATIENT")
 
