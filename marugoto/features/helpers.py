@@ -298,10 +298,11 @@ def categorical_crossval_(
         from marugoto.features import deploy
 
         fold_test_df = df.iloc[test_idxs]
-        patient_preds_df = deploy(
+        patient_preds_df, tile_preds_df= deploy(
             test_df=fold_test_df, learn=learn, target_label=target_label
         )
         patient_preds_df.to_csv(preds_csv, index=False)
+        tile_preds_df.to_csv(output_path / "tile-preds.csv", index=False)
 
 
 def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc):
@@ -329,7 +330,7 @@ def _crossval_train(*, fold_path, fold_df, fold, info, target_label, target_enc)
 
     from marugoto.features import train
 
-    learn = train(
+    learn, _, _= train(
         target_enc=target_enc,
         train_bags=train_df.slide_path.values,
         train_targets=train_df[target_label].values,
