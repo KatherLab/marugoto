@@ -143,11 +143,11 @@ class MapDataset(Dataset):
         return self
 
 
-# class SKLearnEncoder(Protocol):
-#     """An sklearn-style encoder."""
-#     categories_: Sequence[Sequence[str]]
-#     def transform(x: Sequence[Sequence[Any]]):
-#         ...
+class SKLearnEncoder(Protocol):
+    """An sklearn-style encoder."""
+    categories_: Sequence[Sequence[str]]
+    def transform(x: Sequence[Sequence[Any]]):
+        ...
 
 
 class EncodedDataset(MapDataset):
