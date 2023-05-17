@@ -11,13 +11,13 @@ from fastai.vision.all import (
     SaveModelCallback, CSVLogger)
 import pandas as pd
 import numpy as np
-from sklearn.metrics import mean_squared_error
 
 from marugoto.data import SKLearnEncoder
 
 from .data import make_dataset
 from .transformer import Transformer
 from .ViT import ViT
+from .loss import mean_squared_error
 
 
 __all__ = ['train', 'deploy']
