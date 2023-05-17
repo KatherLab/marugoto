@@ -188,6 +188,9 @@ def mean_squared_error(
     0.825...
     """
 
+    y_true = y_true.cpu()
+    y_pred = y_pred.cpu()
+
     output_errors = np.average((y_true - y_pred) ** 2, axis=0, weights=sample_weight)
 
     if not squared:
