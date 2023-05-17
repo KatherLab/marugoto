@@ -1,4 +1,3 @@
-# %%
 from collections import namedtuple
 from typing import Iterable, Sequence, Optional, Tuple
 
@@ -6,7 +5,7 @@ import numpy as np
 import scipy.stats as st
 from matplotlib import pyplot as plt
 from sklearn.metrics import roc_curve, roc_auc_score
-
+import pandas as pd
 
 all = ['plot_roc_curve', 'plot_roc_curves', 'plot_roc_curves_']
 
@@ -107,6 +106,7 @@ def plot_roc_curves_(
 
     Args:
         pred_csvs:  A list of prediction CSV files.
+        test_csvs: A list of test CSV files with the discrete target_label
         target_label:  The target label to calculate the ROC for.
         true_label:  The positive class for the ROC.
         outpath:  Path to save the `.svg` to.
@@ -114,17 +114,31 @@ def plot_roc_curves_(
     import pandas as pd
     from pathlib import Path
     pred_dfs = [pd.read_csv(p, dtype=str) for p in pred_csvs]
+    test_csvs =[tcsv.replace('patient-preds', 'test') for tcsv in pred_csvs]
 
-    y_trues = [df[target_label] == true_label for df in pred_dfs]
-    y_preds = [pd.to_numeric(df[f'{target_label}_{true_label}']) for df in pred_dfs]
-    title = f'{target_label} = {true_label}'
+    lab_dfs = [pd.read_csv(t, dtype=str) for t in test_csvs]
+    y_trues = [df[target_label] == true_label for df in lab_dfs]
+    
+    y_preds = [pd.to_numeric(df['pred']) for df in pred_dfs]
+
+    cohort_type = (outpath.split('/')[-1]) #/home/omarelnahhas/HRD_project/HRD_Binary/TCGA-LUSC-DX-features
+
+    if cohort_type[0] == 'T':
+        cohort_type=cohort_type.split('-')
+    else:
+        cohort_type=cohort_type.split('_')
+    
+    cohort_type = f'{cohort_type[0]}_{cohort_type[1]}'
+
+    title = f'{cohort_type}: {target_label} = {true_label}\nViT regression with MSE loss'
+    print(title)
 
     fig, ax = plt.subplots()
     if len(pred_dfs) == 1:
         plot_roc_curve(ax, y_trues[0], y_preds[0], title=title)
     else:
         plot_roc_curves(ax, y_trues, y_preds, title=title)
-    fig.savefig(Path(outpath)/f'roc-{target_label}={true_label}.svg')
+    fig.savefig(Path(outpath)/f'{cohort_type}_roc-{target_label}={true_label}.svg')
     plt.close(fig)
 
 
