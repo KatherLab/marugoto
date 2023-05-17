@@ -135,8 +135,8 @@ class MapDataset(Dataset):
     def __getitem__(self, index: int) -> Any:
         #breakpoint()
 
-        items = [(ds[index] if len(ds)!=2 else (ds[0][index], ds[1][index])) for ds in self._datasets]
-        return items #self.func(*[ds[index] for ds in self._datasets])
+        # items = [(ds[index] if len(ds)!=2 else (ds[0][index], ds[1][index])) for ds in self._datasets]
+        return self.func(*[ds[index] for ds in self._datasets])
 
     def new_empty(self):
         #FIXME hack to appease fastai's export
