@@ -164,7 +164,7 @@ def deploy_categorical_model_(
         print(f'{preds_csv} already exists!  Skipping...')
         return
 
-    learn = load_learner(model_path)
+    learn = load_learner(model_path, cpu=False) #use GPU for inference
 
 
     test_df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label) #, categories
