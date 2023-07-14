@@ -1,6 +1,31 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "wheel"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "marugoto"
+version = "0.8.0"
+authors = [
+    { name="Marko van Treeck", email="markovantreeck@gmail.com" },
 ]
-build-backend = "setuptools.build_meta"
+description = "A toolbox for building deep learning workflows"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    "h5py~=3.6",
+    "numpy~=1.22",
+    "openpyxl~=3.0",
+    "pandas>=1.4,<3",
+    "torch>=1.8.3,<3",
+    "fastai~=2.5",
+    "fire~=0.4.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/KatherLab/marugoto"
+"Bug Tracker" = "https://github.com/KatherLab/marugoto/issues"
