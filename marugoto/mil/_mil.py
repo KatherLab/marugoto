@@ -17,6 +17,7 @@ from marugoto.data import SKLearnEncoder
 from .data import make_dataset
 from .transformer import Transformer
 from .ViT import ViT
+from .timmViT import MILModel
 
 
 __all__ = ['train', 'deploy']
@@ -69,6 +70,7 @@ def train(
 
     # for binary classification num_classes=2 for same output dim as normal MILModel
     model = ViT(num_classes=2) # Transformer(num_classes=2)
+    #model = MILModel(num_classes=2)
     model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu')) #
 
     # weigh inversely to class occurances
