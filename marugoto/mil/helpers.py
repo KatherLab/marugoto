@@ -77,7 +77,7 @@ def train_categorical_model_(
 
 
     #NOTE: HERE THE TARGETS ARE MIN-MAX NORMALIZED COLUMN WISE
-    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label)
+    df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label).dropna(subset=target_label)
     scaler=MinMaxScaler()
 
     df[target_label] = scaler.fit_transform(df[[target_label]])
