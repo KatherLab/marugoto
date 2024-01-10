@@ -63,6 +63,8 @@ def train_categorical_model_(
         return
 
     clini_df = pd.read_csv(clini_table, dtype=str) if Path(clini_table).suffix == '.csv' else pd.read_excel(clini_table, dtype=str)
+    clini_df = clini_df.astype({target_label: 'float32'})
+    
     slide_df = pd.read_csv(slide_csv, dtype=str)
     df = clini_df.merge(slide_df, on='PATIENT')
 
@@ -78,6 +80,7 @@ def train_categorical_model_(
 
     #NOTE: HERE THE TARGETS ARE MIN-MAX NORMALIZED COLUMN WISE
     df = get_cohort_df(clini_table, slide_csv, feature_dir, target_label)
+    df = (df.drop((df[df[target_label].isna()]).index)).reset_index() 
     scaler=MinMaxScaler()
 
     df[target_label] = scaler.fit_transform(df[[target_label]])
@@ -96,7 +99,7 @@ def train_categorical_model_(
 
     learn = train(
         bags=df.slide_path.values,
-        targets=df[target_label].values,
+        targets=(df[target_label].values).reshape(-1,1),
         add_features=add_features,
         valid_idxs=df.PATIENT.isin(valid_patients),
         path=output_path,

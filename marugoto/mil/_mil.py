@@ -8,7 +8,7 @@ from torch import nn
 import torch.nn.functional as F
 from fastai.vision.all import (
     Learner, DataLoader, DataLoaders, RocAuc,
-    SaveModelCallback, CSVLogger)
+    SaveModelCallback, CSVLogger, EarlyStoppingCallback)
 import pandas as pd
 import numpy as np
 
@@ -50,7 +50,7 @@ def train(
         add_features=[
             (enc, vals[~valid_idxs])
             for enc, vals in add_features],
-        bag_size=None) # set to None, usually 512-ish for batch_size > 1
+        bag_size=4096) # set to None, usually 512-ish for batch_size > 1
 
     valid_ds = make_dataset(
         bags=bags[valid_idxs],
@@ -62,9 +62,9 @@ def train(
 
     # build dataloaders
     train_dl = DataLoader(
-        train_ds, batch_size=1, shuffle=True, num_workers=8) # set to 1 for regression
+        train_ds, batch_size=1, shuffle=True, num_workers=32) # set to 1 for regression
     valid_dl = DataLoader(
-        valid_ds, batch_size=1, shuffle=False, num_workers=8)
+        valid_ds, batch_size=1, shuffle=False, num_workers=32)
     batch = train_dl.one_batch()
 
     # 1 as output dim for regression, 768 for ctranspath dims
@@ -74,14 +74,14 @@ def train(
 
     loss_func = nn.MSELoss()
 
-    dls = DataLoaders(train_dl, valid_dl, device=device) #
+    dls = DataLoaders(train_dl, valid_dl) #
     learn = Learner(dls, model, loss_func=loss_func,lr=.0001, wd=0.01,
                     metrics=[mean_squared_error], path=path)
 
     cbs = [
         SaveModelCallback(fname=f'best_valid'),
-        #EarlyStoppingCallback(monitor='roc_auc_score',
-        #                      min_delta=0.01, patience=patience),
+        EarlyStoppingCallback(monitor='valid_loss',
+                              min_delta=0.0000001, patience=8),
         CSVLogger()]
 
     learn.fit_one_cycle(n_epoch=n_epoch, lr_max=1e-4, cbs=cbs)
