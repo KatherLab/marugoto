@@ -68,7 +68,7 @@ def aggregate_categorical_stats(df) -> pd.DataFrame:
     for cat, data in df.groupby("level_1"):
         scores_df = data[score_labels]
         means, sems = scores_df.mean(), scores_df.sem()
-        l, h = st.t.interval(alpha=0.95, df=len(scores_df) - 1, loc=means, scale=sems)
+        l, h = st.t.interval(confidence=0.95, df=len(scores_df) - 1, loc=means, scale=sems)
         cat_stats_df = (
             pd.DataFrame.from_dict({"mean": means, "95% conf": (h - l) / 2})
             .transpose()
