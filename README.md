@@ -13,44 +13,19 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --checkpoint-path ~/Downloads/best_ckpt.pth \
         --outdir ~/TCGA_features/TCGA-CRC-DX-features/xiyue-wang \
         /mnt/TCGA_BLOCKS/TCGA-CRC-DX-BLOCKS/*
-        
-## Tile-Wise Training and Deployment ##
-
-### Train a Neural Network on Pre-Extracted Features ###
-
-    python -m marugoto.features train \
-        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
-        --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
-        --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
-        --target-label isMSIH \
-        --output-path output/path \
-        (optional/recommended especially during training) --tile_no 256
-
-### Deploy a Model on Another Cohort ###
-
-    python -m marugoto.features deploy \
-        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
-        --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
-        --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
-        --target-label isMSIH \
-        --model-path training-dir/export.pkl \
-        --output-path output/path \
-        (optional) --tile_no 256
-
-### Cross-Validate a Model ###
-
-    python -m marugoto.features crossval \
-        --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
-        --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
-        --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
-        --target-label isMSIH \
-        --output-path output/path \
-        --n-splits 5 \
-        (optional) --fixed_folds /abs/path/to/folds.pt
 
 ## Attention-Based Multiple Instance Learning ##
+### Cross-validate a model on pre-extracted features ###
 
-### Train a Neural Network on Pre-Extracted Features ###
+    python -m marugoto.mil crossval \
+        --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
+        --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
+        --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
+        --target-label isMSIH \
+        --output-path output/path \
+        --n-splits 5
+
+### Train a single model on pre-extracted features ###
 
     python -m marugoto.mil train \
         --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
@@ -59,7 +34,7 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --target-label isMSIH \
         --output-path output/path
 
-### Deploy a Model on Another Cohort ###
+### Deploy a model on pre-extracted features from another cohort ###
 
     python -m marugoto.mil deploy \
         --clini_table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
@@ -69,15 +44,6 @@ https://drive.google.com/drive/folders/1AhstAFVqtTqxeS9WlBpU41BV08LYFUnL
         --model-path training-dir/export.pkl \
         --output_path output/path
 
-### Cross-Validate a Model ###
-
-    python -m marugoto.mil crossval \
-        --clini-table tcga-crc-dx/TCGA-CRC-DX_CLINI.xlsx \
-        --slide-csv tcga-crc-dx/TCGA-CRC-DX_SLIDE.csv \
-        --feature-dir tcga-crc-dx/features_norm_macenko_h5 \
-        --target-label isMSIH \
-        --output-path output/path \
-        --n-splits 5
 
 ## Calculate Statistics for Categorical Deployments ##
 
